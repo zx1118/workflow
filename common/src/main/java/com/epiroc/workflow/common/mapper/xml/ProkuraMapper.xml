@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.epiroc.workflow.common.mapper.ProkuraMapper">
+
+    <select id="getProkuraParticipants" resultType="com.epiroc.workflow.common.entity.Prokura">
+        SELECT
+        p.*,
+        CASE
+        WHEN p.max_approval = mar.target_max THEN 'current'
+        ELSE 'previous'
+        END AS approval_type
+        FROM prokura p
+        JOIN (
+        SELECT MIN(max_approval) AS target_max
+        FROM prokura
+        WHERE
+        (min_approval IS NULL OR min_approval &lt;= #{param.amount})
+        AND max_approval &gt;= #{param.amount}
+        AND del_flag = '0'
+        AND unit_id = #{param.unitId}
+        ) mar
+        WHERE
+        p.del_flag = '0'
+        AND p.unit_id = #{param.unitId}
+        AND p.max_approval &lt;= mar.target_max
+        ORDER BY p.max_approval DESC
+    </select>
+
+</mapper>

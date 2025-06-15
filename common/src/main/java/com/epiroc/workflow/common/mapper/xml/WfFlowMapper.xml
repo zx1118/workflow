@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.epiroc.workflow.common.mapper.WfFlowMapper">
+
+
+    <select id="selectUnionParticipantId" resultType="com.epiroc.workflow.common.entity.WfFlow">
+        SELECT
+        JSON_ARRAYAGG(participant_id) AS wf_participant_ids
+        FROM (
+        SELECT
+        jt.participant_id
+        FROM
+        wf_flow
+        JOIN
+        JSON_TABLE(
+        wf_flow.wf_participant_ids,
+        '$[*]' COLUMNS (
+        participant_id INT PATH '$'
+        )
+        ) AS jt
+        WHERE 1=1
+        <if test="param.stage != null and param.stage != ''">
+            AND stage = #{param.stage}
+        </if>
+        AND wf_flow.wf_participant_ids IS NOT NULL
+        ) AS all_ids
+    </select>
+
+    <select id="getWfFlowIdList" resultType="java.lang.Integer">
+        select id
+        from wf_flow
+        where wf_process_id = #{param.wfProcessId}
+        and stage = #{param.stage}
+        and flow_type = #{param.flowType}
+        and inx = #{param.inx}
+        order by sort_order asc
+    </select>
+
+</mapper>
