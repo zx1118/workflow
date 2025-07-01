@@ -4,6 +4,8 @@ import com.epiroc.workflow.common.entity.WfOrder;
 import com.epiroc.workflow.common.entity.param.OperateParam;
 import org.springframework.beans.factory.InitializingBean;
 
+import java.util.Map;
+
 /**
  * 操作-模板方法类
  *
@@ -15,7 +17,7 @@ import org.springframework.beans.factory.InitializingBean;
  */
 public abstract class OperateAbstractHandler implements InitializingBean {
 
-    public void handle(WfOrder wfOrder, OperateParam operateParam){
+    public Map<String, Object> handle(WfOrder wfOrder, OperateParam operateParam){
         throw new UnsupportedOperationException("not implemented");
     }
 

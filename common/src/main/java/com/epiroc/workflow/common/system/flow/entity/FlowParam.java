@@ -20,7 +20,7 @@ public class FlowParam {
      */
     private Boolean distinct = false;
 
-    private Integer unitId;
+    private String unitId;
 
     private BigDecimal amount;
 

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.epiroc.workflow.common.mapper.WfTaskMapper">
+
+    <!-- 分页查询待办任务 -->
+    <select id="queryPendingTasksPage" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT DISTINCT
+            wo.id as order_id,
+            wo.order_no,
+            wo.order_status,
+            wo.requester_id,
+            wo.requester_name,
+            wo.requester_email,
+            wo.request_date,
+            wo.create_time as order_create_time,
+            wt.id as task_id,
+            wt.name as task_name,
+            wt.display_name as task_display_name,
+            wt.task_status,
+            wt.operator_id,
+            wt.operator_email,
+            wt.create_time as task_create_time,
+            wp.id as process_id,
+            wp.name as process_name,
+            wp.display_name as process_display_name,
+            wp.class_name,
+            wp.table_name
+        FROM wf_task wt
+        INNER JOIN wf_order wo ON wt.order_id = wo.id
+        INNER JOIN wf_process wp ON wo.process_id = wp.id
+        <where>
+            <!-- 待办任务：任务状态为等待操作(1) -->
+            AND wt.task_status = '1'
+            
+            <!-- 当前登录人的任务 -->
+            <choose>
+                <when test="currentUserId != null and currentUserId != ''">
+                    AND (
+                        wt.operator_id = #{currentUserId}
+                        <if test="currentUserEmail != null and currentUserEmail != ''">
+                            OR wt.operator_email = #{currentUserEmail}
+                        </if>
+                    )
+                </when>
+                <when test="currentUserEmail != null and currentUserEmail != ''">
+                    AND wt.operator_email = #{currentUserEmail}
+                </when>
+            </choose>
+            
+            <!-- 流程定义条件 -->
+            <if test="processId != null">
+                AND wo.process_id = #{processId}
+            </if>
+            
+            <!-- 申请人ID -->
+            <if test="requesterId != null and requesterId != ''">
+                AND wo.requester_id = #{requesterId}
+            </if>
+            
+            <!-- 申请人名称（模糊查询） -->
+            <if test="requesterName != null and requesterName != ''">
+                AND wo.requester_name LIKE CONCAT('%', #{requesterName}, '%')
+            </if>
+            
+            <!-- 订单状态 -->
+            <if test="orderStatus != null and orderStatus != ''">
+                AND wo.order_status = #{orderStatus}
+            </if>
+            
+            <!-- 流程名称（模糊查询） -->
+            <if test="processName != null and processName != ''">
+                AND (
+                    wp.name LIKE CONCAT('%', #{processName}, '%')
+                    OR wp.display_name LIKE CONCAT('%', #{processName}, '%')
+                )
+            </if>
+            
+            <!-- 申请时间范围 -->
+            <if test="startTime != null and startTime != ''">
+                AND wo.request_date &gt;= #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND wo.request_date &lt;= #{endTime}
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        ORDER BY
+        <choose>
+            <when test="sortField == 'create_time'">
+                wt.create_time
+            </when>
+            <when test="sortField == 'order_create_time'">
+                wo.create_time
+            </when>
+            <when test="sortField == 'request_date'">
+                wo.request_date
+            </when>
+            <when test="sortField == 'requester_name'">
+                wo.requester_name
+            </when>
+            <when test="sortField == 'process_name'">
+                wp.display_name
+            </when>
+            <otherwise>
+                wt.create_time
+            </otherwise>
+        </choose>
+        
+        <choose>
+            <when test="sortOrder != null and sortOrder.toUpperCase() == 'ASC'">
+                ASC
+            </when>
+            <otherwise>
+                DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="getPendingTasks" resultType="java.util.Map">
+        select
+        wt.name task_name,
+        wt.display_name,
+        wt.operator,
+        wt.id task_id,
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        wp.request_type,
+        wp.unit_id,
+        pa.*
+        from wf_task wt
+        left join wf_order who on wt.order_id = who.id
+        left join wf_process wp on who.process_id = wp.id
+        left join ${params.tableName} pa on who.business_key = pa.id
+        where
+        FIND_IN_SET(#{params.currentUserId}, wt.operator_id)
+        and wt.task_status='1'
+        order by who.update_time desc
+    </select>
+
+</mapper> 

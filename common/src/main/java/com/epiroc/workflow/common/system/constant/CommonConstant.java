@@ -610,6 +610,8 @@ public interface CommonConstant {
 
     String UNIT_SHORT_LINE = "-";
 
+    String UNIT_SHORT_LINE_UNDER = "_";
+
     String UNIT_SPACE_WAVE = " ~ ";
 
     String UNIT_SPACE_COLON = " : ";

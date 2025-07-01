@@ -2,7 +2,7 @@ package com.epiroc.workflow.common.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.convert.WfFlow2WfTaskParticipant;
 import com.epiroc.workflow.common.service.*;
 import com.epiroc.workflow.common.system.flow.FlowContext;
@@ -67,11 +67,11 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
      * @return
      */
     @Override
-    public Result getFlow(GetFlowForm getFlowForm) {
+    public WorkflowResult getFlow(GetFlowForm getFlowForm) {
         // 获取流程定义
         WfProcess wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
         FlowContext flowContext = new FlowContext(wfProcess.getFlowTypes(), this);
         // 流程参数
@@ -79,7 +79,7 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
         // 获取流程信息
         Map<String, Object> flowInfoMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         if (oConvertUtils.isEmpty(flowInfoMap)) {
-            return Result.error("流程信息获取失败");
+            return WorkflowResult.error("流程信息获取失败");
         }
         List<WfFlow> flowList = (List<WfFlow>) flowInfoMap.get("flowList");
         // 流程中包含的规则
@@ -99,7 +99,7 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
         List<WfTaskParticipant> resultList = WfFlow2WfTaskParticipant.getSubmitWfTaskParticipants(flowList, assigneeMap);
         // 重设 sort_order
         WorkflowUtil.resetSortOrder(resultList);
-        return Result.ok(resultList);
+        return WorkflowResult.ok(resultList);
     }
 
     /**

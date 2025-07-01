@@ -5,8 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-//@MapperScan({"com.epiroc.**.mapper*"})
-@MapperScan("${mybatis-plus.mapper-packages}")
+@MapperScan({"com.epiroc.workflow.common.mapper"})
 public class WorkflowApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(WorkflowApplication.class, args);

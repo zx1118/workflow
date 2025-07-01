@@ -2,6 +2,7 @@ package com.epiroc.workflow.common.system.factory;
 
 import cn.hutool.core.util.StrUtil;
 import com.epiroc.workflow.common.entity.WfOrder;
+import com.epiroc.workflow.common.entity.WfTask;
 import com.epiroc.workflow.common.entity.param.OperateParam;
 import com.epiroc.workflow.common.service.WorkflowStateService;
 import com.epiroc.workflow.common.system.constant.OperateConstant;
@@ -13,30 +14,35 @@ import javax.annotation.Resource;
 import java.util.Map;
 
 /**
- * 工作流-提交
+ * 审批-同意
  *
  * @author Theo Zheng
  * @version 1.0
  * <p>
  * Copyright (c) 2025 Epiroc (Nanjing) Construction and Mining Equipment Ltd. All rights reserved.
- * @date 2025-06-14
+ * @date 2025-06-24
  */
-//@Component
-public class WfSubmitHandler extends OperateAbstractHandler implements StateConstant, OperateConstant {
+@Component
+public class OperateApproveHandler extends OperateAbstractHandler implements StateConstant, OperateConstant {
 
     @Resource
     private WorkflowStateService workflowStateService;
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        OperateFactory.registerHandler(StringUtil.joinWithChar(TO_BE_SUBMIT, OPERATE_SUBMIT, StrUtil.DASHED), this);
+        OperateFactory.registerHandler(StringUtil.joinWithChar(PENDING, OPERATE_APPROVE, StrUtil.DASHED), this);
     }
 
     @Override
-    public Map<String, Object> handle(WfOrder wfOrder, OperateParam operateParam){
-        // 业务逻辑处理
-        // 未提交状态 -> 提交操作
-        return (Map<String, Object>) workflowStateService.submit(wfOrder, operateParam).getResult();
+    public Map<String, Object> handle(WfOrder wfOrder, OperateParam operateParam) {
+        WfTask wfTask = new WfTask();
+        wfTask.setApprover(operateParam.getApprover());
+        wfTask.setApproverId(operateParam.getApproverId());
+        wfTask.setApproverEmail(operateParam.getApproverEmail());
+        wfTask.setId(operateParam.getTaskId());
+        wfTask.setComment(operateParam.getComment());
+        // 审批状态 -> 审批操作
+        return (Map<String, Object>) workflowStateService.approve(wfOrder, wfTask).getResult();
     }
 
 }

@@ -14,6 +14,7 @@ import com.epiroc.workflow.common.mapper.WfTaskParticipantMapper;
 import com.epiroc.workflow.common.service.*;
 import com.epiroc.workflow.common.system.constant.ApproveTypeConstant;
 import com.epiroc.workflow.common.system.constant.TaskStatusConstant;
+import com.epiroc.workflow.common.system.constant.WorkflowConstant;
 import com.epiroc.workflow.common.system.query.QueryWrapperBuilder;
 import com.epiroc.workflow.common.util.DateUtils;
 import com.epiroc.workflow.common.util.IdUtil;
@@ -37,7 +38,7 @@ import java.util.List;
  * @date 2025-04-18
  */
 @Service
-public class WfOperateServiceImpl implements WfOperateService {
+public class WfOperateServiceImpl implements WfOperateService, WorkflowConstant {
 
     @Resource
     private WfOrderService wfOrderService;
@@ -57,18 +58,25 @@ public class WfOperateServiceImpl implements WfOperateService {
     @Resource
     private WfDictLoadService wfDictLoadService;
 
+    @Resource
+    private WfToolService wfToolService;
+
     @Override
     public WfOrder operateOrderAndParam(OperateParam operateParam) {
         WfProcess process = operateParam.getWfProcess();
-        // form 表单参数插入
-        String paramId = paramService.insertParam(process.getClassName(), operateParam.getParam(), operateParam.getParamList());
+        String paramId = operateParam.getParamId();
+        if(oConvertUtils.isEmpty(paramId)){
+            // form 表单参数插入
+            paramId = paramService.insertParam(process.getClassName(), operateParam.getParam(),
+                    operateParam.getParamList(), operateParam.getIdFieldName());
+        }
         String orderStatus = operateParam.getOrderStatus();
         new WfOrder();
         WfOrder wfOrder;
         // 查询 wf_order
         if(oConvertUtils.isNotEmpty(operateParam.getOrderId())){
             wfOrder = wfOrderService.getById(operateParam.getOrderId());
-            wfOrder.setUpdateBy(operateParam.getOperatorEmail());
+            wfOrder.setUpdateBy(operateParam.getCreatorEmail());
             wfOrder.setUpdateTime(DateUtils.getDate());
         } else {
             wfOrder = oConvertUtils.entityToModel(operateParam, WfOrder.class);
@@ -80,10 +88,11 @@ public class WfOperateServiceImpl implements WfOperateService {
             }
             // 创建订单编号
             String orderNo = OrderNoUtil.generateOrderNo(process.getOrderNoPre(), process.getOrderNoLength());
+            wfOrder.setRequestDate(DateUtils.getDate());
             wfOrder.setOrderNo(orderNo);
-            wfOrder.setCreateBy(operateParam.getOperatorEmail());
+            wfOrder.setCreateBy(operateParam.getCreatorEmail());
             wfOrder.setCreateTime(DateUtils.getDate());
-            wfOrder.setUpdateBy(operateParam.getOperatorEmail());
+            wfOrder.setUpdateBy(operateParam.getCreatorEmail());
             wfOrderService.save(wfOrder);
         }
         return wfOrder;
@@ -124,7 +133,8 @@ public class WfOperateServiceImpl implements WfOperateService {
     }
 
     @Override
-    public List<WfTaskParticipant> dealSubmitFlow(List<WfTaskParticipant> flowList, Integer orderId) {
+    public List<WfTaskParticipant> dealSubmitFlow(OperateParam operateParam, Integer orderId) {
+        List<WfTaskParticipant> flowList = operateParam.getFlowList();
         // 参数校验
         if (flowList == null || flowList.isEmpty()) {
             throw new IllegalArgumentException("流程列表不能为空");
@@ -160,7 +170,37 @@ public class WfOperateServiceImpl implements WfOperateService {
         
         return flowList;
     }
-    
+
+    @Override
+    public boolean updateTaskById(WfTask task) {
+        return wfTaskService.updateById(task);
+    }
+
+    @Override
+    public List<WfTaskParticipant> getFullFlow(Integer orderId) {
+        return wfTaskParticipantService.getFullFlow(orderId);
+    }
+
+    @Override
+    public WfTaskParticipant updateCurrentTaskParticipant(WfTaskParticipant current) {
+        return wfTaskParticipantService.updateCurrent(current);
+    }
+
+    @Override
+    public WfTaskParticipant updateAndReturnNextTaskParticipant(WfTaskParticipant current, List<WfTaskParticipant> wfTaskParticipantList) {
+        return wfTaskParticipantService.updateAndReturnNext(current, wfTaskParticipantList);
+    }
+
+    @Override
+    public boolean saveTask(WfTask nextWfTask) {
+        return wfTaskService.save(nextWfTask);
+    }
+
+    @Override
+    public boolean isLastApprovalNode(Integer orderId, Integer taskId) {
+        return wfToolService.isLastApprovalNode(orderId, taskId);
+    }
+
     /**
      * 处理操作员ID字符串
      */
@@ -180,7 +220,7 @@ public class WfOperateServiceImpl implements WfOperateService {
         participant.setOperatorId(processedIds);
     }
     
-         /**
+    /**
       * 根据索引设置任务状态
       */
      private void setTaskStatusByIndex(WfTaskParticipant participant, int index, java.util.Date currentTime) {
@@ -197,6 +237,7 @@ public class WfOperateServiceImpl implements WfOperateService {
              case 1:
                  // 第二个任务：等待审批
                  participant.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(TaskStatusConstant.WAITING));
+                 participant.setSortOrder((index + 1) * FLOW_SORT_ORDER_CONSTANT);
                  break;
              default:
                  // 其他任务：未审批
@@ -230,7 +271,7 @@ public class WfOperateServiceImpl implements WfOperateService {
      * 从参与者创建任务
      */
     private WfTask createTaskFromParticipant(WfTaskParticipant participant) {
-        WfTask task = oConvertUtils.entityToModelWithoutId(participant, WfTask.class);
+        WfTask task = oConvertUtils.entityToModel(participant, WfTask.class);
         if (task == null) {
             throw new IllegalStateException("无法从参与者创建任务");
         }

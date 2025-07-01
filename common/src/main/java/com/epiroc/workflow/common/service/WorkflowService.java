@@ -1,6 +1,6 @@
 package com.epiroc.workflow.common.service;
 
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.form.ApproveForm;
 import com.epiroc.workflow.common.entity.form.GetFlowForm;
 import com.epiroc.workflow.common.entity.form.WfSubmitForm;
@@ -15,7 +15,7 @@ public interface WorkflowService {
      * @param operateParam
      * @return
      */
-    Result operate(OperateParam operateParam);
+    WorkflowResult operate(OperateParam operateParam);
 
     /**
      * 工作流处理-通过Handler处理
@@ -30,16 +30,16 @@ public interface WorkflowService {
      * @param getFlowForm
      * @return
      */
-    Result getFlow(GetFlowForm getFlowForm);
+    WorkflowResult getFlow(GetFlowForm getFlowForm);
 
     /**
      * 申请提交
      * @param wfSubmitForm
      * @return
      */
-    Result submit(WfSubmitForm wfSubmitForm);
+    WorkflowResult submit(WfSubmitForm wfSubmitForm);
 
-    Result approve(ApproveForm approveForm);
+    WorkflowResult approve(ApproveForm approveForm);
 
     /**
      * 订单详情

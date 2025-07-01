@@ -2,6 +2,8 @@ package com.epiroc.workflow.common.system.state;
 
 import com.epiroc.workflow.common.system.constant.CommonConstant;
 
+import java.util.Map;
+
 /**
  * 具体状态类-完成状态
  *
@@ -18,7 +20,7 @@ public class WfCompletedState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void submit(WorkflowContext context) {
+    public Map<String, Object> submit(WorkflowContext context) {
         // 已完成状态下不能再提交
         throw new IllegalStateException("工作流已完成，不能再提交");
     }
@@ -48,7 +50,7 @@ public class WfCompletedState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void approve(WorkflowContext context) {
+    public Map<String, Object> approve(WorkflowContext context) {
         // 已完成状态下不能再审批
         throw new IllegalStateException("工作流已完成，不能再审批");
     }

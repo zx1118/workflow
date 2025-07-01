@@ -2,13 +2,14 @@ package com.epiroc.workflow.common.convert;
 
 import com.epiroc.workflow.common.entity.WfFlow;
 import com.epiroc.workflow.common.entity.WfTaskParticipant;
+import com.epiroc.workflow.common.system.constant.CommonConstant;
 import com.epiroc.workflow.common.system.constant.WorkflowConstant;
 import com.epiroc.workflow.common.util.oConvertUtils;
 
 import java.util.List;
 import java.util.Map;
 
-public class WfFlow2WfTaskParticipant implements WorkflowConstant {
+public class WfFlow2WfTaskParticipant implements WorkflowConstant, CommonConstant {
 
     public static List<WfTaskParticipant> getSubmitWfTaskParticipants(List<WfFlow> flowList, Map<String, Object> assigneeMap) {
         for (int i = flowList.size() - 1; i >= 0; i--) {
@@ -16,8 +17,8 @@ public class WfFlow2WfTaskParticipant implements WorkflowConstant {
             if(!FLOW_TYPE_FIXED.equals(wfFlow.getFlowType())){   // 固定流程不要设置审批人;其他类型流程设置审批人
                 String field = wfFlow.getField();
                 if(assigneeMap.containsKey(field)){
-                    String guid = assigneeMap.get(field + STRING_NAME_GUID).toString();
-                    String email = assigneeMap.get(field + STRING_EMAIL).toString();
+                    String guid = assigneeMap.get(field + UNIT_SHORT_LINE_UNDER + STRING_NAME_GUID).toString();
+                    String email = assigneeMap.get(field + UNIT_SHORT_LINE_UNDER + STRING_EMAIL).toString();
                     String name = assigneeMap.get(field).toString();
                     wfFlow.setOperator(name);
                     wfFlow.setOperatorId(guid);

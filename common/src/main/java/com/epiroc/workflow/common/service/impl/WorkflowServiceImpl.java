@@ -2,7 +2,7 @@ package com.epiroc.workflow.common.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.*;
 import com.epiroc.workflow.common.entity.form.ApproveForm;
 import com.epiroc.workflow.common.entity.param.OperateParam;
@@ -58,7 +58,7 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
     private WfOrderService wfOrderService;
 
     @Resource
-    private DynamicServiceDeprecate dynamicService;
+    private WorkflowDynamicService workflowDynamicService;
 
     @Resource
     private WorkflowStateService workflowStateService;
@@ -66,6 +66,9 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
 
     @Resource
     private WfOperateService wfOperateService;
+
+    @Resource
+    private WfDictLoadService wfDictLoadService;
 
     /**
      * 工作流处理
@@ -85,11 +88,11 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
         operateParam.setWfProcess(wfProcess);
         WfOrder wfOrder = wfOperateService.operateOrderAndParam(operateParam);
         // 获取操作类型
-        String operateKey = StringUtil.joinWithChar(operateParam.getOrderStatus(), operateParam.getOperateType(), StrUtil.DASHED);
+        String operateKey = StringUtil.joinWithChar(operateParam.getOrderStatus(), operateParam.getOperateType(),
+                StrUtil.DASHED);
         // 根据当前状态和操作类型执行相应操作,使用WorkflowStateService管理状态
         OperateAbstractHandler invokeStrategy = OperateFactory.getInvokeStrategy(operateKey);
-        invokeStrategy.handle(wfOrder, operateParam);
-        return null;
+        return invokeStrategy.handle(wfOrder, operateParam);
     }
 
     /**
@@ -101,14 +104,14 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
      * @return
      */
     @Override
-    public Result operate(OperateParam operateParam) {
+    public WorkflowResult operate(OperateParam operateParam) {
         Integer orderId = operateParam.getOrderId();
         // 查询 wf_order
         WfOrder wfOrder = wfOrderService.getById(orderId);
         wfOrder.setUpdateBy(operateParam.getOperatorId());
         wfOrder.setUpdateTime(DateUtils.getDate());
         if (oConvertUtils.isEmpty(wfOrder)) {
-            return Result.error("工作流订单不存在");
+            return WorkflowResult.error("工作流订单不存在");
         }
         // 获取当前状态
         String orderStatus = wfOrder.getOrderStatus();
@@ -125,7 +128,7 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
                     // 暂存状态 -> 取消操作
                     return workflowStateService.cancel(wfOrder);
                 } else {
-                    return Result.error("暂存状态下不支持的操作类型: " + operateType);
+                    return WorkflowResult.error("暂存状态下不支持的操作类型: " + operateType);
                 }
                 // 进行中状态
             case ORDER_STATUS_PENDING:
@@ -149,18 +152,18 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
 //                }
                 // 已完成状态
             case ORDER_STATUS_COMPLETE:
-                return Result.error("工作流已完成，不能执行任何操作");
+                return WorkflowResult.error("工作流已完成，不能执行任何操作");
             // 已拒绝状态
             case ORDER_STATUS_REJECT:
                 if ("cancel".equals(operateType)) {
                     // 已拒绝状态 -> 取消操作
                     return workflowStateService.cancel(wfOrder);
                 } else {
-                    return Result.error("已拒绝状态下不支持的操作类型: " + operateType);
+                    return WorkflowResult.error("已拒绝状态下不支持的操作类型: " + operateType);
                 }
                 // 已取消状态
             case ORDER_STATUS_CANCEL:
-                return Result.error("工作流已取消，不能执行任何操作");
+                return WorkflowResult.error("工作流已取消，不能执行任何操作");
             // 退回状态
             case ORDER_STATUS_RETURN:
                 if ("submit".equals(operateType)) {
@@ -170,10 +173,10 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
                     // 退回状态 -> 取消操作
                     return workflowStateService.cancel(wfOrder);
                 } else {
-                    return Result.error("退回状态下不支持的操作类型: " + operateType);
+                    return WorkflowResult.error("退回状态下不支持的操作类型: " + operateType);
                 }
             default:
-                return Result.error("未知的工作流状态: " + orderStatus);
+                return WorkflowResult.error("未知的工作流状态: " + orderStatus);
         }
 
 //        return null;
@@ -185,15 +188,15 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
      * @param operateParam 操作参数
      * @return 操作结果
      */
-    private Result submitFromDraft(WfOrder wfOrder, OperateParam operateParam) {
+    private WorkflowResult submitFromDraft(WfOrder wfOrder, OperateParam operateParam) {
         // 更新订单信息
         wfOrder.setOrderStatus(CommonConstant.ORDER_STATUS_PENDING);
         wfOrderService.updateById(wfOrder);
 
         // 调用工作流状态服务提交
-        Result submitResult = workflowStateService.submit(wfOrder, operateParam);
-        if (!submitResult.isSuccess()) {
-            return submitResult;
+        WorkflowResult submitWorkflowResult = workflowStateService.submit(wfOrder, operateParam);
+        if (!submitWorkflowResult.isSuccess()) {
+            return submitWorkflowResult;
         }
 
         // 处理流程，创建任务
@@ -205,11 +208,11 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
                 WfTaskParticipant next = flowList.get(1);
                 Map<String, Object> resultMap = new HashMap<>();
                 resultMap.put("nextApprover", next);
-                return Result.ok(resultMap);
+                return WorkflowResult.ok(resultMap);
             }
         }
 
-        return Result.ok("提交成功");
+        return WorkflowResult.ok("提交成功");
     }
 
     /**
@@ -218,11 +221,11 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
      * @return
      */
     @Override
-    public Result getFlow(GetFlowForm getFlowForm) {
+    public WorkflowResult getFlow(GetFlowForm getFlowForm) {
         // 获取流程定义
         WfProcess wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
         FlowContext flowContext = new FlowContext(wfProcess.getFlowTypes(), wfFlowService);
         // 流程参数
@@ -230,7 +233,7 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
         // 获取流程信息
         Map<String, Object> flowInfoMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         if (oConvertUtils.isEmpty(flowInfoMap)) {
-            return Result.error("流程信息获取失败");
+            return WorkflowResult.error("流程信息获取失败");
         }
         List<WfFlow> flowList = (List<WfFlow>) flowInfoMap.get("flowList");
         // 流程中包含的规则
@@ -250,11 +253,11 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
         List<WfTaskParticipant> resultList = WfFlow2WfTaskParticipant.getSubmitWfTaskParticipants(flowList, assigneeMap);
         // 重设 sort_order
         WorkflowUtil.resetSortOrder(resultList);
-        return Result.ok(resultList);
+        return WorkflowResult.ok(resultList);
     }
 
     @Override
-    public Result submit(WfSubmitForm wfSubmitForm) {
+    public WorkflowResult submit(WfSubmitForm wfSubmitForm) {
         WfProcess wfProcess = null;
         // 获取流程定义
         if(oConvertUtils.isEmpty(wfSubmitForm.getWfProcessId())){
@@ -264,12 +267,12 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
         }
 
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
         // form 表单参数插入
-        String paramId = paramService.insertParam(wfProcess.getClassName(), wfSubmitForm.getParam(), wfSubmitForm.getParamList());
+        String paramId = paramService.insertParam(wfProcess.getClassName(), wfSubmitForm.getParam(), wfSubmitForm.getParamList(), "");
         if (oConvertUtils.isEmpty(paramId)) {
-            return Result.error("参数插入失败");
+            return WorkflowResult.error("参数插入失败");
         }
         /************** 提交流程 ****************/
         // 创建订单编号
@@ -290,14 +293,14 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
 
         // 发送邮件
 //        JSONObject jsonObject = wfMailSendService.sendSubmitApproveMail(messageMap, next.getOperatorEmail(), "pending");
-        return Result.ok("提交成功！");
+        return WorkflowResult.ok("提交成功！");
     }
 
     @Resource
     private WfTaskService wfTaskService;
 
     @Override
-    public Result approve(ApproveForm approveForm) {
+    public WorkflowResult approve(ApproveForm approveForm) {
 //        MDSUser mdsUser = approveForm.getCurrentUser();
         Integer taskId = approveForm.getTaskId();
         // 获取 wf_task
@@ -344,7 +347,7 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
             WfTask nextWfTask = oConvertUtils.entityToModel(nextTaskParticipant, WfTask.class);
             wfTaskService.save(nextWfTask);
         }
-        return Result.ok("审批成功！");
+        return WorkflowResult.ok("审批成功！");
     }
 
     /**
@@ -356,11 +359,13 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
     @Override
     public Map<String, Object> detail(Integer orderId, String className) {
         Map<String, Object> resultMap = new HashMap<>();
-        WfOrder wfOrder = wfOrderService.getById(orderId);
+        Map<String, Object> orderMap = wfOrderService.getMap(new QueryWrapper<WfOrder>().eq("id", orderId));
         QueryWrapper<WfTaskParticipant> wfTaskParticipantQueryWrapper = new QueryWrapper<>();
         wfTaskParticipantQueryWrapper.eq("order_id", orderId).orderByAsc("sort_order");
-        resultMap.put("order", wfOrder);
-        resultMap.put("param", dynamicService.selectById(className, wfOrder.getBusinessKey()));
+        orderMap.put("order_status_text", wfDictLoadService.getOrderStatusCacheInfo().get(orderMap.get("order_status").toString()));
+        resultMap.put("order", orderMap);
+        resultMap.put("param", workflowDynamicService.selectById(className,
+                orderMap.get("business_key").toString()));
         resultMap.put("flowList", wfTaskParticipantService.list(wfTaskParticipantQueryWrapper));
         return resultMap;
     }

@@ -168,7 +168,7 @@ CREATE TABLE `wf_order`  (
   INDEX `IDX_HIST_ORDER_PROCESSID`(`process_id` ASC) USING BTREE,
   INDEX `IDX_HIST_ORDER_CREATEBY`(`create_by` ASC) USING BTREE,
   INDEX `IDX_HIST_ORDER_BUSSINESS_KEY`(`business_key` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 38 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for wf_process
@@ -190,9 +190,9 @@ CREATE TABLE `wf_process`  (
   `class_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '类名称(参数实体类)',
   `table_name` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '表名称',
   `flow_types` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '流程类型(0-固定流程,1-Prokura流程,2-设置审批人的流程)',
-  `order_no_pre` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
-  `order_no_length` int(4) NULL DEFAULT NULL,
-  `request_name_en` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL,
+  `order_no_pre` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '订单编号前缀',
+  `order_no_length` int(4) NULL DEFAULT NULL COMMENT '订单编号长度',
+  `request_name_en` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '申请名称（英文）',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 96 CHARACTER SET = utf8 COLLATE = utf8_general_ci COMMENT = '流程定义表' ROW_FORMAT = DYNAMIC;
 
@@ -206,7 +206,7 @@ CREATE TABLE `wf_rule`  (
   `table_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表名',
   `execute_sql` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '执行sql',
   `need_set_field` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '需要设置的字段',
-  `type` int(4) NULL DEFAULT NULL COMMENT '规则类型(-1:固定设置,0:申请用户的组织架构(Prokura);1:wf_key_user表;2:数据库;3:外部服务)',
+  `type` int(4) NULL DEFAULT NULL COMMENT '规则类型：-1固定设置，0申请用户的组织架构Prokura，1wf_key_user表，2数据库，3外部服务',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '流程规则表' ROW_FORMAT = DYNAMIC;
 
@@ -240,7 +240,7 @@ CREATE TABLE `wf_task`  (
   INDEX `IDX_HIST_TASK_ORDER`(`order_id` ASC) USING BTREE,
   INDEX `IDX_HIST_WTP_ID`(`wtp_id` ASC) USING BTREE,
   INDEX `IDX_HIST_OPERATOR_ID`(`operator_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for wf_task_participant
@@ -271,6 +271,29 @@ CREATE TABLE `wf_task_participant`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `IDX_ORDER_ID`(`order_id` ASC) USING BTREE,
   INDEX `IDX_PARTICIPANT_CODE`(`participant_Id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 86 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ----------------------------
+-- Records of wf_dict
+-- ----------------------------
+INSERT INTO `wf_dict` VALUES ('1', '订单状态', 'order_status', NULL, 0, NULL, NULL, NULL, NULL, 0, 0, NULL);
+INSERT INTO `wf_dict` VALUES ('2', '任务状态', 'task_status', NULL, 0, NULL, NULL, NULL, NULL, 0, 0, NULL);
+INSERT INTO `wf_dict` VALUES ('3', '审批类型', 'approve_type', NULL, 0, NULL, NULL, NULL, NULL, 0, 0, NULL);
+
+-- ----------------------------
+-- Records of wf_dict_item
+-- ----------------------------
+INSERT INTO `wf_dict_item` VALUES ('1', '1', 'TO_BE_SUBMIT', '-1', NULL, '待提交', 1, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('2', '1', 'PENDING', '1', NULL, '待办', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('20', '2', 'NOT_APPROVED', '0', NULL, '未审批', 1, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('21', '2', 'WAITING', '1', NULL, '等待操作', 2, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('22', '2', 'APPROVED', '2', NULL, '已审批', 3, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('23', '2', 'CANCELLED', '3', NULL, '取消', 4, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('24', '2', 'CLOSED', '4', NULL, '关单', 5, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('30', '3', 'APPROVE', '0', NULL, '同意', 1, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('31', '3', 'REJECT', '1', NULL, '拒绝', 2, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('32', '3', 'CANCEL', '2', NULL, '取消', 3, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('33', '3', 'CLOSE', '3', NULL, '关单', 4, 1, NULL, NULL, NULL, NULL);
+INSERT INTO `wf_dict_item` VALUES ('34', '3', 'RETURN', '4', NULL, '退回', 5, 1, NULL, NULL, NULL, NULL);

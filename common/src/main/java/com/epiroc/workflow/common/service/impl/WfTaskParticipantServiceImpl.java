@@ -1,20 +1,30 @@
 package com.epiroc.workflow.common.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.epiroc.workflow.common.service.WfDictLoadService;
+import com.epiroc.workflow.common.system.constant.ApproveTypeConstant;
 import com.epiroc.workflow.common.system.constant.CommonConstant;
+import com.epiroc.workflow.common.system.constant.StateConstant;
+import com.epiroc.workflow.common.system.constant.TaskStatusConstant;
 import com.epiroc.workflow.common.util.DateUtils;
 import com.epiroc.workflow.common.entity.WfTaskParticipant;
 import com.epiroc.workflow.common.mapper.WfTaskParticipantMapper;
 import com.epiroc.workflow.common.service.WfTaskParticipantService;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Service
 public class WfTaskParticipantServiceImpl extends ServiceImpl<WfTaskParticipantMapper, WfTaskParticipant>
-        implements WfTaskParticipantService {
+        implements WfTaskParticipantService, TaskStatusConstant, StateConstant, ApproveTypeConstant {
+
+    @Resource
+    private WfDictLoadService wfDictLoadService;
 
 
     @Override
@@ -31,16 +41,16 @@ public class WfTaskParticipantServiceImpl extends ServiceImpl<WfTaskParticipantM
             }
             wfTaskParticipant.setOperatorId(String.join(",", operatorIds));
             if (i == 0) {
-                wfTaskParticipant.setTaskStatus("2");   // 已审批
-                wfTaskParticipant.setApproveType("0");  // 0：同意
+                wfTaskParticipant.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(APPROVED));   // 已审批
+                wfTaskParticipant.setApproveType(wfDictLoadService.getApproveTypeCacheInfo().get(APPROVE));  // 0：同意
                 wfTaskParticipant.setFinishTime(DateUtils.getDate());
                 wfTaskParticipant.setApprover(wfTaskParticipant.getOperator());
                 wfTaskParticipant.setApproverId(wfTaskParticipant.getOperatorId());
                 wfTaskParticipant.setApproverEmail(wfTaskParticipant.getOperatorEmail());
             } else if (i == 1) {
-                wfTaskParticipant.setTaskStatus("1");   // 等待审批
+                wfTaskParticipant.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(WAITING));   // 等待审批
             } else {
-                wfTaskParticipant.setTaskStatus("0");   // 未审批
+                wfTaskParticipant.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(NOT_APPROVED));   // 未审批
             }
         }
         saveBatch(flowList);
@@ -48,24 +58,59 @@ public class WfTaskParticipantServiceImpl extends ServiceImpl<WfTaskParticipantM
     }
 
     @Override
-    public WfTaskParticipant updateCurrentTaskAndReturnNext(WfTaskParticipant wfTaskParticipant,
+    public WfTaskParticipant updateCurrentTaskAndReturnNext(WfTaskParticipant currentTaskParticipant,
                                                             List<WfTaskParticipant> wfTaskParticipantList) {
-        wfTaskParticipant.setFinishTime(DateUtils.getDate());
-        updateById(wfTaskParticipant);
+        currentTaskParticipant.setFinishTime(DateUtils.getDate());
+        updateById(currentTaskParticipant);
         // 判断当前流程在列表中的位置
         for(int i = 0;i < wfTaskParticipantList.size();i++){
             WfTaskParticipant temp = wfTaskParticipantList.get(i);
-            if(temp.getId().equals(wfTaskParticipant.getId())){
+            if(temp.getId().equals(currentTaskParticipant.getId())){
                 if(i == wfTaskParticipantList.size() - 1){
                     return null;
                 } else {
                     WfTaskParticipant nextParticipantTask = wfTaskParticipantList.get(i + 1);
-                    nextParticipantTask.setTaskStatus("1");
+                    nextParticipantTask.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(WAITING));
                     nextParticipantTask.setUpdateTime(DateUtils.getDate());
                     updateById(nextParticipantTask);
                     return nextParticipantTask;
                 }
            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<WfTaskParticipant> getFullFlow(Integer id) {
+        QueryWrapper<WfTaskParticipant> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("order_id", id).orderByAsc("sort_order");
+        List<WfTaskParticipant> wfTaskParticipantList = list(queryWrapper);
+        return wfTaskParticipantList;
+    }
+
+    @Override
+    public WfTaskParticipant updateCurrent(WfTaskParticipant current) {
+        updateById(current);
+        return current;
+    }
+
+    @Override
+    public WfTaskParticipant updateAndReturnNext(WfTaskParticipant current,
+                                                 List<WfTaskParticipant> wfTaskParticipantList) {
+        // 判断当前流程在列表中的位置
+        for(int i = 0;i < wfTaskParticipantList.size();i++){
+            WfTaskParticipant temp = wfTaskParticipantList.get(i);
+            if(temp.getId().equals(current.getId())){
+                if(i == wfTaskParticipantList.size() - 1){
+                    return null;
+                } else {
+                    WfTaskParticipant nextParticipantTask = wfTaskParticipantList.get(i + 1);
+                    nextParticipantTask.setTaskStatus(wfDictLoadService.getTaskStatusCacheInfo().get(WAITING));
+                    nextParticipantTask.setUpdateTime(DateUtils.getDate());
+                    updateById(nextParticipantTask);
+                    return nextParticipantTask;
+                }
+            }
         }
         return null;
     }

@@ -2,6 +2,8 @@ package com.epiroc.workflow.common.system.state;
 
 import com.epiroc.workflow.common.system.constant.CommonConstant;
 
+import java.util.Map;
+
 /**
  * 具体状态类-暂存状态
  *
@@ -18,12 +20,13 @@ public class WfDraftState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void submit(WorkflowContext context) {
+    public Map<String, Object> submit(WorkflowContext context) {
         // 从暂存状态提交，转变为进行中状态
         context.setState(new WfPendingState());
         // 这里需要更新数据库，设置工作流状态为进行中
         // 更新当前工作流的orderStatus
         // 创建相应的任务记录等
+        return null;
     }
 
     /**
@@ -51,7 +54,7 @@ public class WfDraftState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void approve(WorkflowContext context) {
+    public Map<String, Object> approve(WorkflowContext context) {
         // 暂存状态下不能审批
         throw new IllegalStateException("工作流处于暂存状态，不能审批");
     }

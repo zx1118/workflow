@@ -1,6 +1,7 @@
 package com.epiroc.workflow.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import jdk.nashorn.internal.objects.annotations.Constructor;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 

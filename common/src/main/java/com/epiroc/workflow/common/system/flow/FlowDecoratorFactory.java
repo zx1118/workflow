@@ -15,6 +15,9 @@ public class FlowDecoratorFactory {
             case "2":
                 flow = new SetFlow(flow, wfFlowService, index);
                 break;
+            case "3":
+                flow = new OrganizationalStructureFlow(flow, wfFlowService, index);
+                break;
             default:
                 break;
         }

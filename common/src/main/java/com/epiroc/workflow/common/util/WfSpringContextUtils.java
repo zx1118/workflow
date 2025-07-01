@@ -19,7 +19,7 @@ import javax.servlet.http.HttpServletRequest;
  * @Copyright : 2020 Epiroc Trading Co., Ltd. All rights reserved.
  */
 @Component
-public class SpringContextUtils implements ApplicationContextAware {
+public class WfSpringContextUtils implements ApplicationContextAware {
 
     /**
      * 上下文对象实例
@@ -28,7 +28,7 @@ public class SpringContextUtils implements ApplicationContextAware {
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        SpringContextUtils.applicationContext = applicationContext;
+        WfSpringContextUtils.applicationContext = applicationContext;
     }
 
     /**

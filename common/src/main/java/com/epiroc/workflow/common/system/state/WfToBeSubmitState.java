@@ -39,7 +39,8 @@ public class WfToBeSubmitState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void submit(WorkflowContext context) {
+    public Map<String, Object> submit(WorkflowContext context) {
+        Map<String, Object> result = new HashMap<>();
         // 从待提交变为进行中，更改状态
         context.setState(new WfPendingState());
         OperateParam operateParam = context.getOperateParam();
@@ -47,12 +48,10 @@ public class WfToBeSubmitState implements WorkflowState {
         WfOrder order = context.getOrder();
         /************** 提交流程 ****************/
         // 流程处理
-        List<WfTaskParticipant> flowList = wfOperateService.dealSubmitFlow(operateParam.getFlowList(), order.getId());
+        List<WfTaskParticipant> flowList = wfOperateService.dealSubmitFlow(operateParam, order.getId());
         WfTaskParticipant nextFlow = flowList.get(1);
-
-
-        int a = 1;
-
+        result.put("next", nextFlow);
+        return result;
     }
 
     /**
@@ -82,7 +81,7 @@ public class WfToBeSubmitState implements WorkflowState {
      * @param context 工作流上下文
      */
     @Override
-    public void approve(WorkflowContext context) {
+    public Map<String, Object> approve(WorkflowContext context) {
         // 检查是否是最后一个审批节点
         boolean isLastApprovalNode = checkIsLastApprovalNode(context);
 
@@ -94,6 +93,7 @@ public class WfToBeSubmitState implements WorkflowState {
             // 如果不是最后一个审批节点，保持进行中状态，但需要更新当前审批节点信息
             // 更新数据库记录，记录当前审批情况，进入下一个审批节点
         }
+        return null;
     }
 
     /**

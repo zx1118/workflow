@@ -1,6 +1,7 @@
 package com.epiroc.workflow.common.service.impl;
 
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
+import com.epiroc.workflow.common.system.constant.CommonConstant;
 import com.epiroc.workflow.common.util.oConvertUtils;
 import com.epiroc.workflow.common.entity.WfFlow;
 import com.epiroc.workflow.common.entity.WfProcess;
@@ -24,7 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConstant {
+public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConstant, CommonConstant {
 
     @Resource
     private WfProcessService wfProcessService;
@@ -41,11 +42,11 @@ public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConst
      * @return
      */
     @Override
-    public Result getFlowConfig(GetFlowForm getFlowForm) {
+    public WorkflowResult getFlowConfig(GetFlowForm getFlowForm) {
         // 获取流程定义
         WfProcess wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
         FlowContext flowContext = new FlowContext(wfProcess.getFlowTypes(), wfFlowService);
         // 流程参数
@@ -53,7 +54,7 @@ public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConst
         // 获取流程信息
         Map<String, Object> flowInfoMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         if (oConvertUtils.isEmpty(flowInfoMap)) {
-            return Result.error("流程信息获取失败");
+            return WorkflowResult.error("流程信息获取失败");
         }
         List<WfFlow> flowList = (List<WfFlow>) flowInfoMap.get("flowList");
         // 流程中包含的规则
@@ -74,8 +75,8 @@ public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConst
             if(!FLOW_TYPE_FIXED.equals(wfFlow.getFlowType())){   // 固定流程不要设置审批人;其他类型流程设置审批人
                 String field = wfFlow.getField();
                 if(assigneeMap.containsKey(field)){
-                    String guid = assigneeMap.get(field + STRING_NAME_GUID).toString();
-                    String email = assigneeMap.get(field + STRING_EMAIL).toString();
+                    String guid = assigneeMap.get(field + UNIT_SHORT_LINE_UNDER + STRING_NAME_GUID).toString();
+                    String email = assigneeMap.get(field + UNIT_SHORT_LINE_UNDER + STRING_EMAIL).toString();
                     String name = assigneeMap.get(field).toString();
                     wfFlow.setOperator(name);
                     wfFlow.setOperatorId(guid);
@@ -83,7 +84,7 @@ public class WorkFlowSetServiceImpl implements WorkFlowSetService, WorkflowConst
                 }
             }
         }
-        return Result.ok(flowList);
+        return WorkflowResult.ok(flowList);
     }
 
 }

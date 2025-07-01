@@ -1,6 +1,6 @@
 package com.epiroc.workflow.common.service;
 
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.form.GetFlowForm;
 
 /**
@@ -13,6 +13,6 @@ public interface WorkFlowSetService {
      * @param getFlowForm
      * @return
      */
-    Result getFlowConfig(GetFlowForm getFlowForm);
+    WorkflowResult getFlowConfig(GetFlowForm getFlowForm);
 
 }

@@ -1,6 +1,6 @@
 package com.epiroc.workflow.common.service;
 
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.WfOrder;
 import com.epiroc.workflow.common.entity.WfTask;
 import com.epiroc.workflow.common.entity.param.OperateParam;
@@ -16,35 +16,35 @@ public interface WorkflowStateService {
      * @param order 工作流订单
      * @return 操作结果
      */
-    Result submit(WfOrder order);
+    WorkflowResult submit(WfOrder order);
 
     /**
      * 提交工作流
      * @param order 工作流订单
      * @return 操作结果
      */
-    Result submit(WfOrder order, OperateParam operateParam);
+    WorkflowResult submit(WfOrder order, OperateParam operateParam);
 
     /**
      * 保存为草稿
      * @param order 工作流订单
      * @return 操作结果
      */
-    Result saveAsDraft(WfOrder order);
+    WorkflowResult saveAsDraft(WfOrder order);
 
     /**
      * 从草稿提交工作流
      * @param order 工作流订单
      * @return 操作结果
      */
-    Result submitFromDraft(WfOrder order, OperateParam operateParam);
+    WorkflowResult submitFromDraft(WfOrder order, OperateParam operateParam);
 
     /**
      * 取消工作流
      * @param order 工作流订单
      * @return 操作结果
      */
-    Result cancel(WfOrder order);
+    WorkflowResult cancel(WfOrder order);
 
     /**
      * 审批通过
@@ -52,7 +52,7 @@ public interface WorkflowStateService {
      * @param task 当前任务
      * @return 操作结果
      */
-    Result approve(WfOrder order, WfTask task);
+    WorkflowResult approve(WfOrder order, WfTask task);
 
     /**
      * 拒绝工作流
@@ -60,7 +60,7 @@ public interface WorkflowStateService {
      * @param task 当前任务
      * @return 操作结果
      */
-    Result reject(WfOrder order, WfTask task);
+    WorkflowResult reject(WfOrder order, WfTask task);
 
     /**
      * 退回工作流
@@ -68,7 +68,7 @@ public interface WorkflowStateService {
      * @param task 当前任务
      * @return 操作结果
      */
-    Result returnToUser(WfOrder order, WfTask task);
+    WorkflowResult returnToUser(WfOrder order, WfTask task);
 
     /**
      * 检查是否是最后一个审批节点

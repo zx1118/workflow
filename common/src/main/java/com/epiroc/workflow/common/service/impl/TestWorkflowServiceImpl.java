@@ -1,7 +1,7 @@
 package com.epiroc.workflow.common.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.*;
 import com.epiroc.workflow.common.entity.form.ApproveForm;
 import com.epiroc.workflow.common.service.*;
@@ -58,7 +58,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
     private WfOrderService wfOrderService;
 
     @Resource
-    private DynamicServiceDeprecate dynamicService;
+    private WorkflowDynamicService workflowDynamicService;
 
     @Resource
     private WfTaskService wfTaskService;
@@ -67,7 +67,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
     private WorkflowStateService workflowStateService;
 
     @Override
-    public Result operate() {
+    public WorkflowResult operate() {
         return null;
     }
 
@@ -77,11 +77,11 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
      * @return
      */
     @Override
-    public Result getFlow(GetFlowForm getFlowForm) {
+    public WorkflowResult getFlow(GetFlowForm getFlowForm) {
         // 获取流程定义
         WfProcess wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
         FlowContext flowContext = new FlowContext(wfProcess.getFlowTypes(), wfFlowService);
         // 流程参数
@@ -89,7 +89,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
         // 获取流程信息
         Map<String, Object> flowInfoMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         if (oConvertUtils.isEmpty(flowInfoMap)) {
-            return Result.error("流程信息获取失败");
+            return WorkflowResult.error("流程信息获取失败");
         }
         List<WfFlow> flowList = (List<WfFlow>) flowInfoMap.get("flowList");
         // 流程中包含的规则
@@ -109,7 +109,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
         List<WfTaskParticipant> resultList = WfFlow2WfTaskParticipant.getSubmitWfTaskParticipants(flowList, assigneeMap);
         // 重设 sort_order
         WorkflowUtil.resetSortOrder(resultList);
-        return Result.ok(resultList);
+        return WorkflowResult.ok(resultList);
     }
 
     /**
@@ -120,7 +120,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
      */
     @Override
     @Transactional
-    public Result submit(WfSubmitForm wfSubmitForm) {
+    public WorkflowResult submit(WfSubmitForm wfSubmitForm) {
         WfProcess wfProcess = null;
         // 获取流程定义
         if(oConvertUtils.isEmpty(wfSubmitForm.getWfProcessId())){
@@ -130,16 +130,16 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
         }
 
         if (oConvertUtils.isEmpty(wfProcess)) {
-            return Result.error("流程定义不存在");
+            return WorkflowResult.error("流程定义不存在");
         }
 
         // 判断是提交还是暂存
         boolean isDraft = CommonConstant.ORDER_STATUS_RETURN_TO_BE_SUBMITTED.equals(wfSubmitForm.getOrderStatus());
 
         // form 表单参数插入
-        String paramId = paramService.insertParam(wfProcess.getClassName(), wfSubmitForm.getParam(), wfSubmitForm.getParamList());
+        String paramId = paramService.insertParam(wfProcess.getClassName(), wfSubmitForm.getParam(), wfSubmitForm.getParamList(), "");
         if (oConvertUtils.isEmpty(paramId)) {
-            return Result.error("参数插入失败");
+            return WorkflowResult.error("参数插入失败");
         }
 
         // 创建订单编号
@@ -152,19 +152,19 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
         wfOrder = wfOrderService.saveSubmitOrder(wfOrder, wfProcess);
 
         // 使用WorkflowStateService管理状态
-        Result stateResult;
+        WorkflowResult stateWorkflowResult;
         if (isDraft) {
             // 如果是暂存
-            stateResult = workflowStateService.saveAsDraft(wfOrder);
-            if (!stateResult.isSuccess()) {
-                return stateResult;
+            stateWorkflowResult = workflowStateService.saveAsDraft(wfOrder);
+            if (!stateWorkflowResult.isSuccess()) {
+                return stateWorkflowResult;
             }
-            return Result.ok("暂存成功！");
+            return WorkflowResult.ok("暂存成功！");
         } else {
             // 如果是提交
-            stateResult = workflowStateService.submit(wfOrder);
-            if (!stateResult.isSuccess()) {
-                return stateResult;
+            stateWorkflowResult = workflowStateService.submit(wfOrder);
+            if (!stateWorkflowResult.isSuccess()) {
+                return stateWorkflowResult;
             }
 
             // 流程处理
@@ -182,7 +182,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
                 // JSONObject jsonObject = wfMailSendService.sendSubmitApproveMail(messageMap, next.getOperatorEmail(), "pending");
             }
 
-            return Result.ok("提交成功！");
+            return WorkflowResult.ok("提交成功！");
         }
     }
 
@@ -194,18 +194,18 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
      */
     @Override
     @Transactional
-    public Result approve(ApproveForm approveForm) {
+    public WorkflowResult approve(ApproveForm approveForm) {
         Integer taskId = approveForm.getTaskId();
         // 获取 wf_task
         WfTask wfTask = wfTaskService.getById(taskId);
         if (wfTask == null) {
-            return Result.error("任务不存在");
+            return WorkflowResult.error("任务不存在");
         }
 
         // 获取订单信息
         WfOrder wfOrder = wfOrderService.getById(wfTask.getOrderId());
         if (wfOrder == null) {
-            return Result.error("工作流订单不存在");
+            return WorkflowResult.error("工作流订单不存在");
         }
 
         // 设置任务的基本信息
@@ -225,7 +225,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
             // 退回
             return workflowStateService.returnToUser(wfOrder, wfTask);
         } else {
-            return Result.error("不支持的操作类型");
+            return WorkflowResult.error("不支持的操作类型");
         }
     }
 
@@ -237,11 +237,11 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
      */
     @Override
     @Transactional
-    public Result cancel(Integer orderId) {
+    public WorkflowResult cancel(Integer orderId) {
         // 获取订单信息
         WfOrder wfOrder = wfOrderService.getById(orderId);
         if (wfOrder == null) {
-            return Result.error("工作流订单不存在");
+            return WorkflowResult.error("工作流订单不存在");
         }
 
         // 使用WorkflowStateService取消工作流
@@ -261,7 +261,7 @@ public class TestWorkflowServiceImpl implements TestWorkflowService, WorkflowCon
         QueryWrapper<WfTaskParticipant> wfTaskParticipantQueryWrapper = new QueryWrapper<>();
         wfTaskParticipantQueryWrapper.eq("order_id", orderId).orderByAsc("sort_order");
         resultMap.put("order", wfOrder);
-        resultMap.put("param", dynamicService.selectById(className, wfOrder.getBusinessKey()));
+        resultMap.put("param", workflowDynamicService.selectById(className, wfOrder.getBusinessKey()));
         resultMap.put("flowList", wfTaskParticipantService.list(wfTaskParticipantQueryWrapper));
         return resultMap;
     }

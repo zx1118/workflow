@@ -2,6 +2,7 @@ package com.epiroc.workflow.common.service;
 
 import com.epiroc.workflow.common.entity.WfOrder;
 import com.epiroc.workflow.common.entity.WfProcess;
+import com.epiroc.workflow.common.entity.WfTask;
 import com.epiroc.workflow.common.entity.WfTaskParticipant;
 import com.epiroc.workflow.common.entity.param.OperateParam;
 
@@ -49,10 +50,22 @@ public interface WfOperateService {
 
     /**
      * 处理提交流程
-     * @param flowList
-     * @param id
+     * @param operateParam
+     * @param orderId
      * @return
      */
-    List<WfTaskParticipant> dealSubmitFlow(List<WfTaskParticipant> flowList, Integer orderId);
+    List<WfTaskParticipant> dealSubmitFlow(OperateParam operateParam, Integer orderId);
+
+    boolean updateTaskById(WfTask task);
+
+    List<WfTaskParticipant> getFullFlow(Integer orderId);
+
+    WfTaskParticipant updateCurrentTaskParticipant(WfTaskParticipant current);
+
+    WfTaskParticipant updateAndReturnNextTaskParticipant(WfTaskParticipant current, List<WfTaskParticipant> wfTaskParticipantList);
+
+    boolean saveTask(WfTask nextWfTask);
+
+    boolean isLastApprovalNode(Integer orderId, Integer taskId);
 
 }

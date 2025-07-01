@@ -1,5 +1,7 @@
 package com.epiroc.workflow.common.system.state;
 
+import java.util.Map;
+
 /**
  * 工作流状态接口
  * <p>
@@ -38,7 +40,7 @@ public interface WorkflowState {
      *
      * @param context 工作流上下文
      */
-    void submit(WorkflowContext context);
+    Map<String, Object> submit(WorkflowContext context);
 
     /**
      * 保存工作流为草稿
@@ -86,7 +88,7 @@ public interface WorkflowState {
      *
      * @param context 工作流上下文
      */
-    void approve(WorkflowContext context);
+    Map<String, Object> approve(WorkflowContext context);
 
     /**
      * 拒绝工作流

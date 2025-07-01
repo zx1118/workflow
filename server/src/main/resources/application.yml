@@ -79,7 +79,6 @@ spring:
     port: 6379
 #mybatis plus ??
 mybatis-plus:
-  mapper-packages: com.epiroc.**.mapper*
   type-handlers-package:  com.epiroc.workflow.system.handler # ???????
   #  type-handlers-package: com.epiroc.supplierchange.handler
   mapper-locations:

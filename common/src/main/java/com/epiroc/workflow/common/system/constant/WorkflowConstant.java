@@ -17,15 +17,17 @@ public interface WorkflowConstant {
      */
     String FLOW_TYPE_SET = "2";
 
+    String FLOW_TYPE_ORGANIZATIONAL_STRUCTURE = "3";
+
     Integer CREATE_REQUEST_ID = 1;
 
     String FIELD_SORT_ORDER = "sort_order";
 
     Integer FLOW_SORT_ORDER_CONSTANT = 10;
 
-    String STRING_NAME_GUID = "Guid";
+    String STRING_NAME_GUID = "GUID";
 
-    String STRING_EMAIL = "Email";
+    String STRING_EMAIL = "EMAIL";
 
     String KEY_USER_ID = "keyUserId";
 

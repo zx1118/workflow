@@ -25,7 +25,7 @@ public class CreateRequestFlow implements IFlow<FlowParam> {
             wfFlow.setSortOrder(WorkflowConstant.FLOW_SORT_ORDER_CONSTANT);
             wfFlow.setName("Create Request");
             wfFlow.setDisplayName("创建申请");
-            wfFlow.setField("Requester");
+            wfFlow.setField("REQUESTER");
             wfFlow.setRuleType(0);
             wfFlow.setWfRuleId(0);
             flowList.add(wfFlow);

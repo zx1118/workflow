@@ -1,7 +1,7 @@
 package com.epiroc.workflow.common.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.epiroc.workflow.common.common.Result;
+import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.WfTaskParticipant;
 import com.epiroc.workflow.common.entity.form.GetFlowForm;
 import com.epiroc.workflow.common.entity.WfFlow;
@@ -23,7 +23,7 @@ public interface WfFlowService extends IService<WfFlow>  {
      * @param getFlowForm
      * @return
      */
-    Result getFlow(GetFlowForm getFlowForm);
+    WorkflowResult getFlow(GetFlowForm getFlowForm);
 
     /**
      * 根据wf_process_id,flow_type,index,stage查询流程信息

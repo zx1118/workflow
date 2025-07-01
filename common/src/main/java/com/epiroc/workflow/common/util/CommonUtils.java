@@ -206,7 +206,7 @@ public class CommonUtils {
         if(oConvertUtils.isNotEmpty(DB_TYPE)){
             return DB_TYPE;
         }
-        DataSource dataSource = SpringContextUtils.getApplicationContext().getBean(DataSource.class);
+        DataSource dataSource = WfSpringContextUtils.getApplicationContext().getBean(DataSource.class);
         try {
             return getDatabaseTypeByDataSource(dataSource);
         } catch (SQLException e) {

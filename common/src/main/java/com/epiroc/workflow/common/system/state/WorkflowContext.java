@@ -3,9 +3,12 @@ package com.epiroc.workflow.common.system.state;
 import com.epiroc.workflow.common.entity.WfOrder;
 import com.epiroc.workflow.common.entity.WfTask;
 import com.epiroc.workflow.common.entity.param.OperateParam;
+import com.epiroc.workflow.common.service.WfDictLoadService;
 import com.epiroc.workflow.common.service.WfOperateService;
 import com.epiroc.workflow.common.system.constant.CommonConstant;
 import com.epiroc.workflow.common.system.constant.StateConstant;
+
+import java.util.Map;
 
 /**
  * 上下文-维护 WfOrder 实例及其状态
@@ -23,6 +26,7 @@ public class WorkflowContext {
     private WfOrder order;
     private WfTask currentTask;
     private OperateParam operateParam;
+    private WfDictLoadService wfDictLoadService;
 
     public WorkflowContext(WfOrder order) {
         this.order = order;
@@ -48,6 +52,15 @@ public class WorkflowContext {
     public WorkflowContext(WfOrder order, WfTask currentTask) {
         this.order = order;
         this.currentTask = currentTask;
+        // 根据数据库中的状态初始化当前状态
+        setStateFromDatabase(order.getOrderStatus());
+    }
+
+    public WorkflowContext(WfOrder order, WfTask currentTask, WfOperateService operateService, WfDictLoadService wfDictLoadService) {
+        this.order = order;
+        this.currentTask = currentTask;
+        this.operateService = operateService;
+        this.wfDictLoadService = wfDictLoadService;
         // 根据数据库中的状态初始化当前状态
         setStateFromDatabase(order.getOrderStatus());
     }
@@ -99,8 +112,8 @@ public class WorkflowContext {
     }
 
     // 委托给当前状态的方法
-    public void submit() {
-        currentState.submit(this);
+    public Map<String, Object> submit() {
+        return currentState.submit(this);
     }
 
     public void saveAsDraft() {
@@ -111,8 +124,8 @@ public class WorkflowContext {
         currentState.cancel(this);
     }
 
-    public void approve() {
-        currentState.approve(this);
+    public Map<String, Object> approve() {
+        return currentState.approve(this);
     }
 
     public void reject() {
@@ -154,6 +167,15 @@ public class WorkflowContext {
 
     public WfOperateService getOperateService() {
         return operateService;
+    }
+
+
+    public WfDictLoadService getWfDictLoadService() {
+        return wfDictLoadService;
+    }
+
+    public void setWfDictLoadService(WfDictLoadService wfDictLoadService) {
+        this.wfDictLoadService = wfDictLoadService;
     }
 
 }

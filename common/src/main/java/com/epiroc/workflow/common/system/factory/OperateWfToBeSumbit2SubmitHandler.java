@@ -7,8 +7,10 @@ import com.epiroc.workflow.common.service.WorkflowStateService;
 import com.epiroc.workflow.common.system.constant.OperateConstant;
 import com.epiroc.workflow.common.system.constant.StateConstant;
 import com.epiroc.workflow.common.util.StringUtil;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * 待提交-提交
@@ -19,6 +21,7 @@ import javax.annotation.Resource;
  * Copyright (c) 2025 Epiroc (Nanjing) Construction and Mining Equipment Ltd. All rights reserved.
  * @date 2025-06-14
  */
+@Component
 public class OperateWfToBeSumbit2SubmitHandler extends OperateAbstractHandler implements StateConstant, OperateConstant {
 
     @Resource
@@ -30,8 +33,8 @@ public class OperateWfToBeSumbit2SubmitHandler extends OperateAbstractHandler im
     }
 
     @Override
-    public void handle(WfOrder wfOrder, OperateParam operateParam){
-        // 未提交状态 -> 提交操作
-        workflowStateService.submit(wfOrder, operateParam);
+    public Map<String, Object> handle(WfOrder wfOrder, OperateParam operateParam){
+        // 待提交状态 -> 提交操作
+        return (Map<String, Object>) workflowStateService.submit(wfOrder, operateParam).getResult();
     }
 }

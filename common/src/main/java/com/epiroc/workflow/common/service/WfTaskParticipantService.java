@@ -9,6 +9,12 @@ public interface WfTaskParticipantService extends IService<WfTaskParticipant> {
 
     Integer saveSubmitFlow(List<WfTaskParticipant> flowList, Integer orderId);
 
-    WfTaskParticipant updateCurrentTaskAndReturnNext(WfTaskParticipant wfTaskParticipant, List<WfTaskParticipant> wfTaskParticipantList);
+    WfTaskParticipant updateCurrentTaskAndReturnNext(WfTaskParticipant currentTaskParticipant, List<WfTaskParticipant> wfTaskParticipantList);
+
+    List<WfTaskParticipant> getFullFlow(Integer orderId);
+
+    WfTaskParticipant updateCurrent(WfTaskParticipant current);
+
+    WfTaskParticipant updateAndReturnNext(WfTaskParticipant current, List<WfTaskParticipant> wfTaskParticipantList);
 
 }

@@ -33,7 +33,7 @@ public class GenerateFlowTest {
         FlowContext flowContext = new FlowContext("2,0", wfFlowService);
         flowParam.setStage("1");
         flowParam.setWfProcessId(95);
-        flowParam.setUnitId(1);
+        flowParam.setUnitId("1");
         flowParam.setAmount(new BigDecimal("6000"));
         Map<String, Object> testMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         int a = 1;

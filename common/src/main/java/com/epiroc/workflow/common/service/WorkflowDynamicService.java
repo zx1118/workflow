@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.epiroc.workflow.common.system.exception.DynamicServiceException;
 import com.epiroc.workflow.common.system.exception.TypeMismatchException;
@@ -29,9 +31,9 @@ import java.util.function.Function;
 
 @Service
 @Slf4j
-public class DynamicService {
+public class WorkflowDynamicService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DynamicServiceDeprecate.class);
+    private static final Logger logger = LoggerFactory.getLogger(WorkflowDynamicService.class);
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -238,6 +240,102 @@ public class DynamicService {
 
             // 使用缓存机制获取主键字段
             Field idField = getIdField(entity.getClass());
+            idField.setAccessible(true);
+            Object idValue = idField.get(entity);
+
+            if (!(idValue instanceof Serializable)) {
+                throw new RuntimeException("主键类型未实现Serializable接口");
+            }
+
+            logger.info("插入成功，生成ID：{}", idValue);
+            return (Serializable) idValue;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("插入操作异常", e);
+            throw new RuntimeException("系统内部异常", e);
+        }
+    }
+
+    /**
+     * 直接插入实体对象并返回主键ID（无需Map转换）
+     * @param entity 实体对象（非Map类型）
+     * @return 插入后的主键ID
+     */
+    public <T> Serializable insertEntityReturnId(T entity) {
+        try {
+            if (entity == null) {
+                throw new IllegalArgumentException("实体对象不能为null");
+            }
+
+            if (entity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用insertReturnIdHigh方法");
+            }
+
+            Class<?> clazz = entity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+
+            logger.info("开始插入实体对象，类型: {}", clazz.getName());
+
+            // 执行插入操作
+            int result = mapper.insert(entity);
+            if (result <= 0) {
+                throw new RuntimeException("插入失败，影响行数为0");
+            }
+
+            // 使用缓存机制获取主键字段
+            Field idField = getIdField(clazz);
+            idField.setAccessible(true);
+            Object idValue = idField.get(entity);
+
+            if (!(idValue instanceof Serializable)) {
+                throw new RuntimeException("主键类型未实现Serializable接口");
+            }
+
+            logger.info("插入成功，生成ID：{}", idValue);
+            return (Serializable) idValue;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("插入操作异常", e);
+            throw new RuntimeException("系统内部异常", e);
+        }
+    }
+
+    /**
+     * 直接插入实体对象并返回主键ID（通过Class类型验证）
+     * @param clazz 实体类Class
+     * @param entity 实体对象
+     * @return 插入后的主键ID
+     */
+    public <T> Serializable insertEntityReturnId(Class<T> clazz, T entity) {
+        try {
+            if (entity == null) {
+                throw new IllegalArgumentException("实体对象不能为null");
+            }
+
+            if (entity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用insertReturnIdHigh方法");
+            }
+
+            // 验证实体类型匹配
+            if (!clazz.isInstance(entity)) {
+                throw new IllegalArgumentException(String.format("实体对象类型不匹配，期望: %s，实际: %s", 
+                    clazz.getName(), entity.getClass().getName()));
+            }
+
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+
+            logger.info("开始插入实体对象，类型: {}", clazz.getName());
+
+            // 执行插入操作
+            int result = mapper.insert(entity);
+            if (result <= 0) {
+                throw new RuntimeException("插入失败，影响行数为0");
+            }
+
+            // 使用缓存机制获取主键字段
+            Field idField = getIdField(clazz);
             idField.setAccessible(true);
             Object idValue = idField.get(entity);
 
@@ -944,6 +1042,382 @@ public class DynamicService {
         return convertIdToString(id);
     }
 
+    /**
+     * 获取字符串类型主键（通用转换）
+     */
+    public <T> String insertWithStringId(T entity) {
+        Serializable id = insertEntityReturnId(entity);
+        return convertIdToString(id);
+    }
+
+    /**
+     * 获取Long类型主键（类型安全，直接传入entity）
+     */
+    public <T> Long insertWithLongId(T entity) {
+        Serializable id = insertEntityReturnId(entity);
+        if (id instanceof Long) {
+            return (Long) id;
+        }
+        throw new TypeMismatchException("ID_TYPE_MISMATCH",
+                "期望Long类型主键，实际类型: " + id.getClass().getSimpleName());
+    }
+
+    /**
+     * 批量插入实体列表（直接传入List<Entity>）
+     * @param entityList 实体列表
+     * @return 是否成功
+     */
+    public <T> boolean insertBatch(List<T> entityList) {
+        try {
+            if (entityList == null || entityList.isEmpty()) {
+                logger.warn("批量插入数据为空");
+                return true;
+            }
+
+            // 从第一个实体获取类型信息
+            T firstEntity = entityList.get(0);
+            if (firstEntity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用saveBatch方法");
+            }
+
+            Class<?> clazz = firstEntity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量插入实体对象，类型: {}, 数据量: {}", clazz.getName(), entityList.size());
+            
+            // 批量插入，每次最多1000条
+            int batchSize = 1000;
+            int totalSize = entityList.size();
+            int successCount = 0;
+            
+            for (int i = 0; i < totalSize; i += batchSize) {
+                int endIndex = Math.min(i + batchSize, totalSize);
+                List<T> batch = entityList.subList(i, endIndex);
+                
+                for (T entity : batch) {
+                    try {
+                        // 验证实体类型一致性
+                        if (!clazz.isInstance(entity)) {
+                            logger.warn("跳过类型不匹配的实体，期望: {}, 实际: {}", 
+                                clazz.getName(), entity.getClass().getName());
+                            continue;
+                        }
+                        
+                        int result = mapper.insert(entity);
+                        if (result > 0) {
+                            successCount++;
+                        }
+                    } catch (Exception e) {
+                        logger.error("批量插入单条数据失败: {}", e.getMessage(), e);
+                        // 继续处理其他数据，不中断整个批次
+                    }
+                }
+                
+                logger.debug("批量插入进度: {}/{}", Math.min(endIndex, totalSize), totalSize);
+            }
+            
+            logger.info("批量插入完成，成功: {}/{}", successCount, totalSize);
+            return successCount > 0; // 只要有成功的就返回true
+            
+        } catch (Exception e) {
+            logger.error("批量插入失败", e);
+            throw new RuntimeException("批量插入失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入实体列表并返回插入成功的数量
+     * @param entityList 实体列表
+     * @return 插入成功的数量
+     */
+    public <T> int insertBatchCount(List<T> entityList) {
+        try {
+            if (entityList == null || entityList.isEmpty()) {
+                logger.warn("批量插入数据为空");
+                return 0;
+            }
+
+            // 从第一个实体获取类型信息
+            T firstEntity = entityList.get(0);
+            if (firstEntity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用saveBatch方法");
+            }
+
+            Class<?> clazz = firstEntity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量插入实体对象（返回计数），类型: {}, 数据量: {}", clazz.getName(), entityList.size());
+            
+            int successCount = 0;
+            
+            for (T entity : entityList) {
+                try {
+                    // 验证实体类型一致性
+                    if (!clazz.isInstance(entity)) {
+                        logger.warn("跳过类型不匹配的实体，期望: {}, 实际: {}", 
+                            clazz.getName(), entity.getClass().getName());
+                        continue;
+                    }
+                    
+                    int result = mapper.insert(entity);
+                    if (result > 0) {
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    logger.error("批量插入单条数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量插入完成，成功插入: {} 条", successCount);
+            return successCount;
+            
+        } catch (Exception e) {
+            logger.error("批量插入失败", e);
+            throw new RuntimeException("批量插入失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入实体列表并返回所有插入成功的主键ID列表
+     * @param entityList 实体列表
+     * @return 插入成功的主键ID列表
+     */
+    public <T> List<Serializable> insertBatchReturnIds(List<T> entityList) {
+        try {
+            List<Serializable> idList = new ArrayList<>();
+            
+            if (entityList == null || entityList.isEmpty()) {
+                logger.warn("批量插入数据为空");
+                return idList;
+            }
+
+            // 从第一个实体获取类型信息
+            T firstEntity = entityList.get(0);
+            if (firstEntity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用saveBatch方法");
+            }
+
+            Class<?> clazz = firstEntity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            Field idField = getIdField(clazz);
+            
+            logger.info("开始批量插入实体对象（返回ID列表），类型: {}, 数据量: {}", clazz.getName(), entityList.size());
+            
+            for (T entity : entityList) {
+                try {
+                    // 验证实体类型一致性
+                    if (!clazz.isInstance(entity)) {
+                        logger.warn("跳过类型不匹配的实体，期望: {}, 实际: {}", 
+                            clazz.getName(), entity.getClass().getName());
+                        continue;
+                    }
+                    
+                    int result = mapper.insert(entity);
+                    if (result > 0) {
+                        // 获取插入后的主键值
+                        idField.setAccessible(true);
+                        Object idValue = idField.get(entity);
+                        if (idValue instanceof Serializable) {
+                            idList.add((Serializable) idValue);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("批量插入单条数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量插入完成，成功插入: {} 条，返回ID数量: {}", idList.size(), idList.size());
+            return idList;
+            
+        } catch (Exception e) {
+            logger.error("批量插入失败", e);
+            throw new RuntimeException("批量插入失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入Map列表（需要指定实体类名）
+     * @param className 实体类全名
+     * @param mapList Map列表
+     * @return 是否成功
+     */
+    public boolean insertBatchMaps(String className, List<Map<String, Object>> mapList) {
+        try {
+            if (mapList == null || mapList.isEmpty()) {
+                logger.warn("批量插入Map数据为空，类名: {}", className);
+                return true;
+            }
+
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量插入Map数据，类名: {}, 数据量: {}", className, mapList.size());
+            
+            // 批量插入，每次最多1000条
+            int batchSize = 1000;
+            int totalSize = mapList.size();
+            int successCount = 0;
+            
+            for (int i = 0; i < totalSize; i += batchSize) {
+                int endIndex = Math.min(i + batchSize, totalSize);
+                List<Map<String, Object>> batch = mapList.subList(i, endIndex);
+                
+                for (Map<String, Object> map : batch) {
+                    try {
+                        // 将Map转换为实体对象
+                        Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                        mapToBean(map, entityObj);
+                        
+                        int result = mapper.insert(entityObj);
+                        if (result > 0) {
+                            successCount++;
+                        }
+                    } catch (Exception e) {
+                        logger.error("批量插入单条Map数据失败: {}", e.getMessage(), e);
+                        // 继续处理其他数据，不中断整个批次
+                    }
+                }
+                
+                logger.debug("批量插入Map进度: {}/{}", Math.min(endIndex, totalSize), totalSize);
+            }
+            
+            logger.info("批量插入Map完成，成功: {}/{}", successCount, totalSize);
+            return successCount > 0; // 只要有成功的就返回true
+            
+        } catch (Exception e) {
+            logger.error("批量插入Map失败，类名: {}", className, e);
+            throw new RuntimeException("批量插入Map失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入Map列表并返回插入成功的数量
+     * @param className 实体类全名
+     * @param mapList Map列表
+     * @return 插入成功的数量
+     */
+    public int insertBatchMapsCount(String className, List<Map<String, Object>> mapList) {
+        try {
+            if (mapList == null || mapList.isEmpty()) {
+                logger.warn("批量插入Map数据为空，类名: {}", className);
+                return 0;
+            }
+
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量插入Map数据（返回计数），类名: {}, 数据量: {}", className, mapList.size());
+            
+            int successCount = 0;
+            
+            for (Map<String, Object> map : mapList) {
+                try {
+                    // 将Map转换为实体对象
+                    Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                    mapToBean(map, entityObj);
+                    
+                    int result = mapper.insert(entityObj);
+                    if (result > 0) {
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    logger.error("批量插入单条Map数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量插入Map完成，成功插入: {} 条", successCount);
+            return successCount;
+            
+        } catch (Exception e) {
+            logger.error("批量插入Map失败，类名: {}", className, e);
+            throw new RuntimeException("批量插入Map失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入Map列表并返回所有插入成功的主键ID列表
+     * @param className 实体类全名
+     * @param mapList Map列表
+     * @return 插入成功的主键ID列表
+     */
+    public List<Serializable> insertBatchMapsReturnIds(String className, List<Map<String, Object>> mapList) {
+        try {
+            List<Serializable> idList = new ArrayList<>();
+            
+            if (mapList == null || mapList.isEmpty()) {
+                logger.warn("批量插入Map数据为空，类名: {}", className);
+                return idList;
+            }
+
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            Field idField = getIdField(clazz);
+            
+            logger.info("开始批量插入Map数据（返回ID列表），类名: {}, 数据量: {}", className, mapList.size());
+            
+            for (Map<String, Object> map : mapList) {
+                try {
+                    // 将Map转换为实体对象
+                    Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                    mapToBean(map, entityObj);
+                    
+                    int result = mapper.insert(entityObj);
+                    if (result > 0) {
+                        // 获取插入后的主键值
+                        idField.setAccessible(true);
+                        Object idValue = idField.get(entityObj);
+                        if (idValue instanceof Serializable) {
+                            idList.add((Serializable) idValue);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("批量插入单条Map数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量插入Map完成，成功插入: {} 条，返回ID数量: {}", idList.size(), idList.size());
+            return idList;
+            
+        } catch (Exception e) {
+            logger.error("批量插入Map失败，类名: {}", className, e);
+            throw new RuntimeException("批量插入Map失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量插入Map列表（通过Class类型）
+     * @param clazz 实体类Class
+     * @param mapList Map列表
+     * @return 是否成功
+     */
+    public boolean insertBatchMaps(Class<?> clazz, List<Map<String, Object>> mapList) {
+        return insertBatchMaps(clazz.getName(), mapList);
+    }
+
+    /**
+     * 批量插入Map列表并返回插入成功的数量（通过Class类型）
+     * @param clazz 实体类Class
+     * @param mapList Map列表
+     * @return 插入成功的数量
+     */
+    public int insertBatchMapsCount(Class<?> clazz, List<Map<String, Object>> mapList) {
+        return insertBatchMapsCount(clazz.getName(), mapList);
+    }
+
+    /**
+     * 批量插入Map列表并返回所有插入成功的主键ID列表（通过Class类型）
+     * @param clazz 实体类Class
+     * @param mapList Map列表
+     * @return 插入成功的主键ID列表
+     */
+    public List<Serializable> insertBatchMapsReturnIds(Class<?> clazz, List<Map<String, Object>> mapList) {
+        return insertBatchMapsReturnIds(clazz.getName(), mapList);
+    }
+
     /******************** 核心私有方法 ********************/
     private void initializeMapperCache() {
         applicationContext.getBeansOfType(BaseMapper.class).values().forEach(mapper -> {
@@ -1552,5 +2026,72 @@ public class DynamicService {
         return selectMaps(clazz.getName(), queryWrapper);
     }
 
+    /**
+     * 分页查询记录列表
+     * @param className 实体类全名
+     * @param pageNum 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param queryWrapper 查询条件
+     * @return 分页结果
+     */
+    @SuppressWarnings("unchecked")
+    public <T> IPage<T> selectPage(String className, Integer pageNum, Integer pageSize, Wrapper<T> queryWrapper) {
+        try {
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<T> mapper = (BaseMapper<T>) getMapperByClass(clazz);
+            
+            Page<T> page = new Page<>(pageNum, pageSize);
+            return mapper.selectPage(page, queryWrapper);
+        } catch (Exception e) {
+            logger.error("分页查询记录列表失败，类名: {}", className, e);
+            throw new RuntimeException("分页查询失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 分页查询记录列表（通过Class类型）
+     * @param clazz 实体类Class
+     * @param pageNum 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param queryWrapper 查询条件
+     * @return 分页结果
+     */
+    public <T> IPage<T> selectPage(Class<T> clazz, Integer pageNum, Integer pageSize, Wrapper<T> queryWrapper) {
+        return selectPage(clazz.getName(), pageNum, pageSize, queryWrapper);
+    }
+
+    /**
+     * 分页查询Map列表
+     * @param className 实体类全名
+     * @param pageNum 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param queryWrapper 查询条件
+     * @return 分页结果
+     */
+    @SuppressWarnings("unchecked")
+    public IPage<Map<String, Object>> selectMapsPage(String className, Integer pageNum, Integer pageSize, Wrapper queryWrapper) {
+        try {
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            Page<Map<String, Object>> page = new Page<>(pageNum, pageSize);
+            return mapper.selectMapsPage(page, queryWrapper);
+        } catch (Exception e) {
+            logger.error("分页查询Map列表失败，类名: {}", className, e);
+            throw new RuntimeException("分页查询失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 分页查询Map列表（通过Class类型）
+     * @param clazz 实体类Class
+     * @param pageNum 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param queryWrapper 查询条件
+     * @return 分页结果
+     */
+    public IPage<Map<String, Object>> selectMapsPage(Class<?> clazz, Integer pageNum, Integer pageSize, Wrapper queryWrapper) {
+        return selectMapsPage(clazz.getName(), pageNum, pageSize, queryWrapper);
+    }
 
 }

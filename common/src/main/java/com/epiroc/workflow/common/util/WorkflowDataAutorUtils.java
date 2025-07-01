@@ -20,7 +20,7 @@ public class WorkflowDataAutorUtils {
      */
     @SuppressWarnings("unchecked")
     public static synchronized List<SysPermissionDataRuleModel> loadDataSearchConditon() {
-        return (List<SysPermissionDataRuleModel>) SpringContextUtils.getHttpServletRequest().getAttribute(MENU_DATA_AUTHOR_RULES);
+        return (List<SysPermissionDataRuleModel>) WfSpringContextUtils.getHttpServletRequest().getAttribute(MENU_DATA_AUTHOR_RULES);
 
     }
 
