@@ -20,10 +20,10 @@ public class WfOrder {
     private String orderNo;
 
     @TableField("unit_id")
-    private Integer unitId;
+    private String unitId;
 
     @TableField("depart_id")
-    private Integer departId;
+    private String departId;
 
     @TableField("business_key")
     private String businessKey;

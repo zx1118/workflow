@@ -69,9 +69,13 @@ public class WfOperateServiceImpl implements WfOperateService, WorkflowConstant 
             // form 表单参数插入
             paramId = paramService.insertParam(process.getClassName(), operateParam.getParam(),
                     operateParam.getParamList(), operateParam.getIdFieldName());
+        } else {
+            if(operateParam.getNeedUpdate()){
+                // 更新参数
+                paramService.updateParam(process.getClassName(), operateParam.getParam(), operateParam.getParamList(), operateParam.getIdFieldName());
+            }
         }
         String orderStatus = operateParam.getOrderStatus();
-        new WfOrder();
         WfOrder wfOrder;
         // 查询 wf_order
         if(oConvertUtils.isNotEmpty(operateParam.getOrderId())){

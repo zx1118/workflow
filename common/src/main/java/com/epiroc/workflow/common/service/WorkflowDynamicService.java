@@ -372,11 +372,302 @@ public class WorkflowDynamicService {
     public <T> boolean update(String className, T entity) {
         try {
             Class<?> clazz = getClassByFullName(className);
-            BaseMapper<T> mapper = (BaseMapper<T>) getMapperByClass(clazz);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            // 处理Map类型参数转换
+            if (entity instanceof Map) {
+                Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                mapToBean((Map<String, Object>) entity, entityObj);
+                entity = (T) entityObj;
+            }
+            
+            logger.info("更新实体，类型: {}", clazz.getName());
             return mapper.updateById(entity) > 0;
         } catch (Exception e) {
+            logger.error("更新失败", e);
             throw new RuntimeException("更新失败", e);
         }
+    }
+
+    /**
+     * 更新数据（直接传入实体对象）
+     */
+    public <T> boolean update(T entity) {
+        try {
+            if (entity == null) {
+                throw new IllegalArgumentException("实体对象不能为null");
+            }
+
+            // 处理Map类型参数转换
+            Object processedEntity = entity;
+            Class<?> clazz;
+            
+            if (entity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用update(String className, T entity)方法");
+            } else {
+                clazz = entity.getClass();
+            }
+            
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("更新实体对象，类型: {}", clazz.getName());
+            return mapper.updateById(processedEntity) > 0;
+        } catch (Exception e) {
+            logger.error("更新失败", e);
+            throw new RuntimeException("更新失败", e);
+        }
+    }
+
+    /**
+     * 批量更新实体列表（直接传入List<Entity>）
+     * @param entityList 实体列表
+     * @return 是否成功
+     */
+    public <T> boolean updateBatch(List<T> entityList) {
+        try {
+            if (entityList == null || entityList.isEmpty()) {
+                logger.warn("批量更新数据为空");
+                return true;
+            }
+
+            // 从第一个实体获取类型信息
+            T firstEntity = entityList.get(0);
+            if (firstEntity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用updateBatchMaps方法");
+            }
+
+            Class<?> clazz = firstEntity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量更新实体对象，类型: {}, 数据量: {}", clazz.getName(), entityList.size());
+            
+            // 批量更新，每次最多1000条
+            int batchSize = 1000;
+            int totalSize = entityList.size();
+            int successCount = 0;
+            
+            for (int i = 0; i < totalSize; i += batchSize) {
+                int endIndex = Math.min(i + batchSize, totalSize);
+                List<T> batch = entityList.subList(i, endIndex);
+                
+                for (T entity : batch) {
+                    try {
+                        // 验证实体类型一致性
+                        if (!clazz.isInstance(entity)) {
+                            logger.warn("跳过类型不匹配的实体，期望: {}, 实际: {}", 
+                                clazz.getName(), entity.getClass().getName());
+                            continue;
+                        }
+                        
+                        // 处理Map类型参数转换（虽然前面已经检查过，但为了保险起见）
+                        Object processedEntity = entity;
+                        if (entity instanceof Map) {
+                            Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                            mapToBean((Map<String, Object>) entity, entityObj);
+                            processedEntity = entityObj;
+                        }
+                        
+                        int result = mapper.updateById(processedEntity);
+                        if (result > 0) {
+                            successCount++;
+                        }
+                    } catch (Exception e) {
+                        logger.error("批量更新单条数据失败: {}", e.getMessage(), e);
+                        // 继续处理其他数据，不中断整个批次
+                    }
+                }
+                
+                logger.debug("批量更新进度: {}/{}", Math.min(endIndex, totalSize), totalSize);
+            }
+            
+            logger.info("批量更新完成，成功: {}/{}", successCount, totalSize);
+            return successCount > 0; // 只要有成功的就返回true
+            
+        } catch (Exception e) {
+            logger.error("批量更新失败", e);
+            throw new RuntimeException("批量更新失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量更新实体列表并返回更新成功的数量
+     * @param entityList 实体列表
+     * @return 更新成功的数量
+     */
+    public <T> int updateBatchCount(List<T> entityList) {
+        try {
+            if (entityList == null || entityList.isEmpty()) {
+                logger.warn("批量更新数据为空");
+                return 0;
+            }
+
+            // 从第一个实体获取类型信息
+            T firstEntity = entityList.get(0);
+            if (firstEntity instanceof Map) {
+                throw new IllegalArgumentException("此方法不支持Map类型参数，请使用updateBatchMapsCount方法");
+            }
+
+            Class<?> clazz = firstEntity.getClass();
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量更新实体对象（返回计数），类型: {}, 数据量: {}", clazz.getName(), entityList.size());
+            
+            int successCount = 0;
+            
+            for (T entity : entityList) {
+                try {
+                    // 验证实体类型一致性
+                    if (!clazz.isInstance(entity)) {
+                        logger.warn("跳过类型不匹配的实体，期望: {}, 实际: {}", 
+                            clazz.getName(), entity.getClass().getName());
+                        continue;
+                    }
+                    
+                    // 处理Map类型参数转换（虽然前面已经检查过，但为了保险起见）
+                    Object processedEntity = entity;
+                    if (entity instanceof Map) {
+                        Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                        mapToBean((Map<String, Object>) entity, entityObj);
+                        processedEntity = entityObj;
+                    }
+                    
+                    int result = mapper.updateById(processedEntity);
+                    if (result > 0) {
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    logger.error("批量更新单条数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量更新完成，成功更新: {} 条", successCount);
+            return successCount;
+            
+        } catch (Exception e) {
+            logger.error("批量更新失败", e);
+            throw new RuntimeException("批量更新失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量更新Map列表（需要指定实体类名）
+     * @param className 实体类全名
+     * @param mapList Map列表
+     * @return 是否成功
+     */
+    public boolean updateBatchMaps(String className, List<Map<String, Object>> mapList) {
+        try {
+            if (mapList == null || mapList.isEmpty()) {
+                logger.warn("批量更新Map数据为空，类名: {}", className);
+                return true;
+            }
+
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量更新Map数据，类名: {}, 数据量: {}", className, mapList.size());
+            
+            // 批量更新，每次最多1000条
+            int batchSize = 1000;
+            int totalSize = mapList.size();
+            int successCount = 0;
+            
+            for (int i = 0; i < totalSize; i += batchSize) {
+                int endIndex = Math.min(i + batchSize, totalSize);
+                List<Map<String, Object>> batch = mapList.subList(i, endIndex);
+                
+                for (Map<String, Object> map : batch) {
+                    try {
+                        // 将Map转换为实体对象
+                        Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                        mapToBean(map, entityObj);
+                        
+                        int result = mapper.updateById(entityObj);
+                        if (result > 0) {
+                            successCount++;
+                        }
+                    } catch (Exception e) {
+                        logger.error("批量更新单条Map数据失败: {}", e.getMessage(), e);
+                        // 继续处理其他数据，不中断整个批次
+                    }
+                }
+                
+                logger.debug("批量更新Map进度: {}/{}", Math.min(endIndex, totalSize), totalSize);
+            }
+            
+            logger.info("批量更新Map完成，成功: {}/{}", successCount, totalSize);
+            return successCount > 0; // 只要有成功的就返回true
+            
+        } catch (Exception e) {
+            logger.error("批量更新Map失败，类名: {}", className, e);
+            throw new RuntimeException("批量更新Map失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量更新Map列表并返回更新成功的数量
+     * @param className 实体类全名
+     * @param mapList Map列表
+     * @return 更新成功的数量
+     */
+    public int updateBatchMapsCount(String className, List<Map<String, Object>> mapList) {
+        try {
+            if (mapList == null || mapList.isEmpty()) {
+                logger.warn("批量更新Map数据为空，类名: {}", className);
+                return 0;
+            }
+
+            Class<?> clazz = getClassByFullName(className);
+            BaseMapper<Object> mapper = (BaseMapper<Object>) getMapperByClass(clazz);
+            
+            logger.info("开始批量更新Map数据（返回计数），类名: {}, 数据量: {}", className, mapList.size());
+            
+            int successCount = 0;
+            
+            for (Map<String, Object> map : mapList) {
+                try {
+                    // 将Map转换为实体对象
+                    Object entityObj = clazz.getDeclaredConstructor().newInstance();
+                    mapToBean(map, entityObj);
+                    
+                    int result = mapper.updateById(entityObj);
+                    if (result > 0) {
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    logger.error("批量更新单条Map数据失败: {}", e.getMessage(), e);
+                    // 继续处理其他数据
+                }
+            }
+            
+            logger.info("批量更新Map完成，成功更新: {} 条", successCount);
+            return successCount;
+            
+        } catch (Exception e) {
+            logger.error("批量更新Map失败，类名: {}", className, e);
+            throw new RuntimeException("批量更新Map失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量更新Map列表（通过Class类型）
+     * @param clazz 实体类Class
+     * @param mapList Map列表
+     * @return 是否成功
+     */
+    public boolean updateBatchMaps(Class<?> clazz, List<Map<String, Object>> mapList) {
+        return updateBatchMaps(clazz.getName(), mapList);
+    }
+
+    /**
+     * 批量更新Map列表并返回更新成功的数量（通过Class类型）
+     * @param clazz 实体类Class
+     * @param mapList Map列表
+     * @return 更新成功的数量
+     */
+    public int updateBatchMapsCount(Class<?> clazz, List<Map<String, Object>> mapList) {
+        return updateBatchMapsCount(clazz.getName(), mapList);
     }
 
     /**

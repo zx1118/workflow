@@ -14,7 +14,7 @@ public class WfFlow2WfTaskParticipant implements WorkflowConstant, CommonConstan
     public static List<WfTaskParticipant> getSubmitWfTaskParticipants(List<WfFlow> flowList, Map<String, Object> assigneeMap) {
         for (int i = flowList.size() - 1; i >= 0; i--) {
             WfFlow wfFlow = flowList.get(i);
-            if(!FLOW_TYPE_FIXED.equals(wfFlow.getFlowType())){   // 固定流程不要设置审批人;其他类型流程设置审批人
+            if(!FLOW_TYPE_FIXED.equals(wfFlow.getFlowType()) && !FLOW_TYPE_CONDITION.equals(wfFlow.getFlowType())){   // 固定流程不要设置审批人;其他类型流程设置审批人
                 String field = wfFlow.getField();
                 if(assigneeMap.containsKey(field)){
                     String guid = assigneeMap.get(field + UNIT_SHORT_LINE_UNDER + STRING_NAME_GUID).toString();
@@ -33,6 +33,7 @@ public class WfFlow2WfTaskParticipant implements WorkflowConstant, CommonConstan
             WfTaskParticipant wfTaskParticipant = resultList.get(j);
             wfTaskParticipant.setWfFlowId(wfTaskParticipant.getId());
             wfTaskParticipant.setId(null);
+            wfTaskParticipant.setComment(flowList.get(j).getRemarks());
         }
         return resultList;
     }

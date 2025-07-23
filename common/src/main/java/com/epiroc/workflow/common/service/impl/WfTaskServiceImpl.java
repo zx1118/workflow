@@ -9,11 +9,13 @@ import com.epiroc.workflow.common.entity.WfProcess;
 import com.epiroc.workflow.common.entity.WfTask;
 import com.epiroc.workflow.common.entity.form.TaskForm;
 import com.epiroc.workflow.common.enums.TaskStatusEnum;
+import com.epiroc.workflow.common.mapper.WfProcessMapper;
 import com.epiroc.workflow.common.mapper.WfTaskMapper;
 import com.epiroc.workflow.common.service.WfProcessService;
 import com.epiroc.workflow.common.service.WfTaskService;
 import com.epiroc.workflow.common.service.WorkflowDynamicService;
 import com.epiroc.workflow.common.system.constant.CommonConstant;
+import com.epiroc.workflow.common.util.WorkflowUtil;
 import com.epiroc.workflow.common.util.oConvertUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,9 @@ public class WfTaskServiceImpl extends ServiceImpl<WfTaskMapper, WfTask> impleme
 
     @Resource
     private WfTaskMapper wfTaskMapper;
+
+    @Resource
+    private WfProcessMapper wfProcessMapper;
 
     @Override
     public Boolean editWfask(Integer taskId, String taskStatus, String comment) {
@@ -69,6 +74,194 @@ public class WfTaskServiceImpl extends ServiceImpl<WfTaskMapper, WfTask> impleme
         }
     }
 
+    @Override
+    public IPage<Map<String, Object>> pendingWithoutProcess(TaskForm taskForm) {
+        try {
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(taskForm.getPageNum(), taskForm.getPageSize());
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getPendingTasksWithoutProcess(page, taskForm);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询待办任务列表失败", e);
+            throw new RuntimeException("查询待办任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public IPage<Map<String, Object>> pendingMultiProcess(TaskForm taskForm) {
+        try {
+            // 1. 查询流程定义
+            List<WfProcess> processList = wfProcessMapper.selectList(new QueryWrapper<WfProcess>());
+            List<Long> processIdList = new ArrayList<>();
+            for(WfProcess wfProcess : processList){
+                processIdList.add(Long.valueOf(wfProcess.getId()));
+            }
+            taskForm.setTableName(processList.get(0).getTableName());
+            taskForm.setProcessIds(processIdList);
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(taskForm.getPageNum(), taskForm.getPageSize());
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getPendingTasksMultiProcess(page, taskForm);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询待办任务列表失败", e);
+            throw new RuntimeException("查询待办任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 我的任务
+     * @param myParam
+     * @return
+     */
+    @Override
+    public IPage<Map<String, Object>> myMultiProcess(Map<String, Object> myParam) {
+        if(!myParam.containsKey("queryAll")) myParam.put("queryAll", "0");
+        try {
+            // 1. 查询流程定义
+            List<WfProcess> processList = wfProcessMapper.selectList(new QueryWrapper<WfProcess>());
+            List<Long> processIdList = new ArrayList<>();
+            for(WfProcess wfProcess : processList){
+                processIdList.add(Long.valueOf(wfProcess.getId()));
+            }
+            myParam.put("tableName", processList.get(0).getTableName());
+            myParam.put("processIds", processIdList);
+            // 第一步：根据实体类过滤有效字段
+            Map<String, Object> validParams = WorkflowUtil.filterEntityFields(processList.get(0).getClassName(), myParam);
+            // 第二步：基于有效字段生成SQL查询条件
+            String tableAlias = "pa";
+            // 生成默认查询模式（等于 + 模糊）
+            String sqlBoth = WorkflowUtil.generateSqlQuery(validParams, tableAlias);
+            System.out.println("\n第二步 - 生成SQL查询条件:");
+            System.out.println("默认模式(等于+模糊): " + sqlBoth);
+            if(oConvertUtils.isNotEmpty(sqlBoth))
+                myParam.put("paramQueryCondition", sqlBoth);
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(Integer.valueOf(myParam.get("pageNo").toString()), Integer.valueOf(myParam.get("pageSize").toString()));
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getMyTasksMultiProcess(page, myParam);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询我的任务列表失败", e);
+            throw new RuntimeException("查询我的任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public IPage<Map<String, Object>> relateMultiProcess(Map<String, Object> relateParam) {
+        if(!relateParam.containsKey("queryAll")) relateParam.put("queryAll", "0");
+        try {
+            // 1. 查询流程定义
+            List<WfProcess> processList = wfProcessMapper.selectList(new QueryWrapper<WfProcess>());
+            List<Long> processIdList = new ArrayList<>();
+            for(WfProcess wfProcess : processList){
+                processIdList.add(Long.valueOf(wfProcess.getId()));
+            }
+            relateParam.put("tableName", processList.get(0).getTableName());
+            relateParam.put("processIds", processIdList);
+            // 第一步：根据实体类过滤有效字段
+            Map<String, Object> validParams = WorkflowUtil.filterEntityFields(processList.get(0).getClassName(), relateParam);
+            // 第二步：基于有效字段生成SQL查询条件
+            String tableAlias = "pa";
+            // 生成默认查询模式（等于 + 模糊）
+            String sqlBoth = WorkflowUtil.generateSqlQuery(validParams, tableAlias);
+            System.out.println("\n第二步 - 生成SQL查询条件:");
+            System.out.println("默认模式(等于+模糊): " + sqlBoth);
+            if(oConvertUtils.isNotEmpty(sqlBoth))
+                relateParam.put("paramQueryCondition", sqlBoth);
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(Integer.valueOf(relateParam.get("pageNo").toString()), Integer.valueOf(relateParam.get("pageSize").toString()));
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getRelateTasksMultiProcess(page, relateParam);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询我的任务列表失败", e);
+            throw new RuntimeException("查询我的任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public IPage<Map<String, Object>> my(Map<String, Object> myParam) {
+        if(!myParam.containsKey("queryAll")) myParam.put("queryAll", "0");
+        try {
+            // 1. 查询流程定义
+            WfProcess wfProcess = null;
+            if (myParam.containsKey("processId")) {
+                wfProcess = wfProcessService.getById(myParam.get("processId").toString());
+                if (wfProcess == null) {
+                    log.warn("未找到流程定义，processId: {}", myParam.get("processId").toString());
+                    return new Page<>(Integer.valueOf(myParam.get("pageNum").toString()), Integer.valueOf(myParam.get("pageSize").toString()));
+                }
+            }
+            myParam.put("tableName", wfProcess.getTableName());
+            // 第一步：根据实体类过滤有效字段
+            Map<String, Object> validParams = WorkflowUtil.filterEntityFields(wfProcess.getClassName(), myParam);
+            // 第二步：基于有效字段生成SQL查询条件
+            String tableAlias = "pa";
+            // 生成默认查询模式（等于 + 模糊）
+            String sqlBoth = WorkflowUtil.generateSqlQuery(validParams, tableAlias);
+            System.out.println("\n第二步 - 生成SQL查询条件:");
+            System.out.println("默认模式(等于+模糊): " + sqlBoth);
+            if(oConvertUtils.isNotEmpty(sqlBoth))
+                myParam.put("paramQueryCondition", sqlBoth);
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(Integer.valueOf(myParam.get("pageNo").toString()), Integer.valueOf(myParam.get("pageSize").toString()));
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getMyTasks(page, myParam);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询我的任务列表失败", e);
+            throw new RuntimeException("查询我的任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 所有任务
+     * @param allParam
+     * @return
+     */
+    @Override
+    public IPage<Map<String, Object>> all(Map<String, Object> allParam) {
+        if(!allParam.containsKey("queryAll")) allParam.put("queryAll", "0");
+        try {
+            // 1. 查询流程定义
+            WfProcess wfProcess = null;
+            if (allParam.containsKey("processId")) {
+                wfProcess = wfProcessService.getById(allParam.get("processId").toString());
+                if (wfProcess == null) {
+                    log.warn("未找到流程定义，processId: {}", allParam.get("processId").toString());
+                    return new Page<>(Integer.valueOf(allParam.get("pageNum").toString()), Integer.valueOf(allParam.get("pageSize").toString()));
+                }
+            }
+            allParam.put("tableName", wfProcess.getTableName());
+            // 第一步：根据实体类过滤有效字段
+            Map<String, Object> validParams = WorkflowUtil.filterEntityFields(wfProcess.getClassName(), allParam);
+            // 第二步：基于有效字段生成SQL查询条件
+            String tableAlias = "pa";
+            // 生成默认查询模式（等于 + 模糊）
+            String sqlBoth = WorkflowUtil.generateSqlQuery(validParams, tableAlias);
+            System.out.println("\n第二步 - 生成SQL查询条件:");
+            System.out.println("默认模式(等于+模糊): " + sqlBoth);
+            if(oConvertUtils.isNotEmpty(sqlBoth))
+                allParam.put("paramQueryCondition", sqlBoth);
+            // 创建分页对象
+            Page<Map<String, Object>> page = new Page<>(Integer.valueOf(allParam.get("pageNo").toString()),
+                    Integer.valueOf(allParam.get("pageSize").toString()));
+            // 分页查询方法并返回数据列表
+            IPage<Map<String, Object>> pageResult = wfTaskMapper.getAllTasks(page, allParam);
+            return pageResult;
+        } catch (Exception e) {
+            log.error("查询所有任务列表失败", e);
+            throw new RuntimeException("查询所有任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 查询待办任务
+     * @param taskForm 查询条件
+     * @return
+     */
     @Override
     public IPage<Map<String, Object>> queryPendingTasks(TaskForm taskForm) {
         try {

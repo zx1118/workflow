@@ -8,6 +8,7 @@ import com.epiroc.workflow.common.entity.WfFlow;
 import com.epiroc.workflow.common.system.flow.entity.FlowParam;
 
 import java.util.List;
+import java.util.Map;
 
 public interface WfFlowService extends IService<WfFlow>  {
 
@@ -54,5 +55,12 @@ public interface WfFlowService extends IService<WfFlow>  {
     List<Integer> getWfFlowIdList(FlowParam param);
 
     List<WfTaskParticipant> dealSubmitFlow(List<WfTaskParticipant> flowList, Integer orderId);
+
+    /**
+     * 执行sql
+     * @param sql
+     * @return
+     */
+    List<Map<String, Object>> executeSql(String sql);
 
 }

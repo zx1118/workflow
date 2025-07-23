@@ -5,11 +5,16 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.epiroc.workflow.common.common.WorkflowResult;
 import com.epiroc.workflow.common.entity.*;
 import com.epiroc.workflow.common.entity.form.ApproveForm;
+import com.epiroc.workflow.common.entity.form.TaskForm;
 import com.epiroc.workflow.common.entity.param.OperateParam;
+import com.epiroc.workflow.common.entity.param.BatchOperateParam;
 import com.epiroc.workflow.common.service.*;
 import com.epiroc.workflow.common.system.constant.CommonConstant;
+import com.epiroc.workflow.common.system.constant.OperateConstant;
+import com.epiroc.workflow.common.system.constant.StateConstant;
 import com.epiroc.workflow.common.system.factory.OperateAbstractHandler;
 import com.epiroc.workflow.common.system.factory.OperateFactory;
+import com.epiroc.workflow.common.system.factory.OperateBatchSubmitHandler;
 import com.epiroc.workflow.common.util.*;
 import com.epiroc.workflow.common.convert.WfFlow2WfTaskParticipant;
 import com.epiroc.workflow.common.entity.form.GetFlowForm;
@@ -22,9 +27,11 @@ import com.epiroc.workflow.common.system.flow.entity.FlowParam;
 import com.epiroc.workflow.common.system.rule.RuleContext;
 import com.epiroc.workflow.common.system.rule.model.RulePair;
 import com.epiroc.workflow.common.system.rule.model.RuleParam;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +77,9 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
     @Resource
     private WfDictLoadService wfDictLoadService;
 
+    @Resource
+    private ApplicationContext applicationContext;
+
     /**
      * 工作流处理
      *
@@ -80,8 +90,13 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
      */
     @Override
     public Map<String, Object> operateByHandler(OperateParam operateParam) {
+        WfProcess wfProcess = null;
         // 获取流程定义
-        WfProcess wfProcess = wfProcessService.getWfProcessByOperateParam(operateParam);
+        if(oConvertUtils.isEmpty(operateParam.getWfProcess())){
+            wfProcess = wfProcessService.getWfProcessByOperateParam(operateParam);
+        } else {
+            wfProcess = operateParam.getWfProcess();
+        }
         if (oConvertUtils.isEmpty(wfProcess)) {
             String message = "流程定义不存在";
         }
@@ -368,6 +383,56 @@ public class WorkflowServiceImpl implements WorkflowService, WorkflowConstant, C
                 orderMap.get("business_key").toString()));
         resultMap.put("flowList", wfTaskParticipantService.list(wfTaskParticipantQueryWrapper));
         return resultMap;
+    }
+
+    @Override
+    public Map<String, Object> queryTask(TaskForm taskForm) {
+        return Collections.emptyMap();
+    }
+
+    /**
+     * 批量提交流程
+     * @param batchParam 批量操作参数
+     * @return 批量操作结果
+     */
+    @Override
+    public Map<String, Object> batchSubmit(BatchOperateParam batchParam) {
+        // 参数校验
+        if (batchParam == null || oConvertUtils.isEmpty(batchParam.getOperateParams())) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "批量操作参数不能为空");
+            return result;
+        }
+
+        // 设置默认的操作类型为批量提交
+        batchParam.setBatchOperateType("BATCH_SUBMIT");
+
+        // 为每个操作参数设置必要的默认值
+        for (OperateParam operateParam : batchParam.getOperateParams()) {
+            // 设置操作类型为提交
+            if (oConvertUtils.isEmpty(operateParam.getOperateType())) {
+                operateParam.setOperateType(OperateConstant.OPERATE_SUBMIT);
+            }
+            // 设置订单状态为待提交
+            if (oConvertUtils.isEmpty(operateParam.getOrderStatus())) {
+                operateParam.setOrderStatus(StateConstant.TO_BE_SUBMIT);
+            }
+        }
+
+        // 通过ApplicationContext获取批量提交处理器，避免循环依赖
+        OperateBatchSubmitHandler batchHandler = applicationContext.getBean(OperateBatchSubmitHandler.class);
+        return batchHandler.handleBatch(batchParam);
+    }
+
+    /**
+     * 操作订单和参数
+     * @param operateParam
+     * @return
+     */
+    @Override
+    public WfOrder operateOrderAndParam(OperateParam operateParam) {
+        return wfOperateService.operateOrderAndParam(operateParam);
     }
 
 }

@@ -2,6 +2,7 @@ package com.epiroc.workflow.common.entity.form;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @Data
@@ -15,12 +16,20 @@ public class GetFlowForm {
     /**
      * 阶段（针对存在多段流程的情况，默认为1）
      */
-    private String stage;
+    private String stage = "1";
 
-    private Integer unitId;
+    private String unitId;
 
     private String unit;
 
     private Map<String, Object> assigneeMap;
+
+    private String comment;
+
+    private String requestType;
+
+    private BigDecimal amount;
+
+    private Map<String, Object> param;
 
 }

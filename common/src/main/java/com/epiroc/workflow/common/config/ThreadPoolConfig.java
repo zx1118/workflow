@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Configuration
 @EnableAsync
 public class ThreadPoolConfig implements AsyncConfigurer {
+
     private static final Logger logger = LoggerFactory.getLogger(ThreadPoolConfig.class);
 
     /**

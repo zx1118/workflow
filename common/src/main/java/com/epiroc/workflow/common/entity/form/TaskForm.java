@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.List;
 
 /**
  * @author Theo Zheng
@@ -19,6 +20,8 @@ public class TaskForm {
      * 流程定义ID
      */
     private Long processId;
+
+    private List<Long> processIds;
 
     /**
      * 当前登录用户ID

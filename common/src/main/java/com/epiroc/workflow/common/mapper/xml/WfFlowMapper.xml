@@ -36,4 +36,8 @@
         order by sort_order asc
     </select>
 
+    <select id="executeQuerySql" resultType="java.util.Map">
+        ${sql}
+    </select>
+
 </mapper>

@@ -3,6 +3,7 @@ package com.epiroc.workflow.common.system.flow.entity;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Data
 public class FlowParam {
@@ -23,5 +24,9 @@ public class FlowParam {
     private String unitId;
 
     private BigDecimal amount;
+
+    private String comment;
+
+    private Map<String, Object> param;
 
 }

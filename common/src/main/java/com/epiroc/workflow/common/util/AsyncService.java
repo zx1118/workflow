@@ -63,7 +63,8 @@ public class AsyncService {
         logger.info("开始带返回值的异步任务: {}, 线程: {}", taskId, Thread.currentThread().getName());
         try {
             // 模拟复杂处理
-            Thread.sleep(3000);
+            Thread.sleep(5000);
+            System.out.println("wait");
             return CompletableFuture.completedFuture("任务 " + taskId + " 处理结果");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

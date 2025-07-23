@@ -146,4 +146,310 @@
         order by who.update_time desc
     </select>
 
+    <select id="getPendingTasksMultiProcess" resultType="java.util.Map">
+        select
+        wt.name task_name,
+        wt.display_name,
+        wt.operator,
+        wt.id task_id,
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        wp.id process_id,
+        wp.request_type,
+        wp.unit_id,
+        pa.*
+        from wf_task wt
+        left join wf_order who on wt.order_id = who.id
+        left join wf_process wp on who.process_id = wp.id
+        left join ${params.tableName} pa on who.business_key = pa.id
+        <where>
+            and FIND_IN_SET(#{params.currentUserId}, wt.operator_id)
+            and wt.task_status='1'
+            <if test="params.processIds != null">
+                and who.process_id in
+                <foreach item="item" collection="params.processIds" separator="," open="(" close=")" index="">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        order by who.update_time desc
+    </select>
+
+    <select id="getPendingTasksParamMap" resultType="java.util.Map">
+        select
+        wt.name task_name,
+        wt.display_name,
+        wt.operator,
+        wt.id task_id,
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        wp.request_type,
+        wp.unit_id,
+        pa.*
+        from wf_task wt
+        left join wf_order who on wt.order_id = who.id
+        left join wf_process wp on who.process_id = wp.id
+        left join ${tableName} pa on who.business_key = pa.id
+        where
+        FIND_IN_SET(#{currentUserId}, wt.operator_id)
+        and wt.task_status='1'
+        order by who.update_time desc
+    </select>
+
+    <select id="getMyTasks" resultType="java.util.Map">
+        SELECT
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        pa.*,
+        pa.id param_id,
+        wp.request_type,
+        ft.id task_id,
+        CASE 
+            WHEN who.order_status = '2' THEN NULL 
+            ELSE ft.display_name 
+        END as display_name
+        FROM
+        wf_order who
+        LEFT JOIN wf_process wp ON who.process_id = wp.id
+        LEFT JOIN ${paramMap.tableName} pa ON who.business_key = pa.id
+        LEFT JOIN (
+        SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY CASE task_status WHEN 1 THEN 0 ELSE 1 END, create_time DESC) AS task_rn
+        FROM
+        wf_task) ft ON who.id = ft.order_id
+        <where>
+            and ft.task_rn = 1
+            <if test="paramMap.requester != null and paramMap.requester != '' ">
+                and who.requester_name like concat('%',#{paramMap.requester},'%')
+            </if>
+            <if test="paramMap.queryAll != '' ">
+                and (
+                who.create_by = #{paramMap.guid}
+                or who.requester_id = #{paramMap.guid}
+                )
+            </if>
+            <if test="paramMap.paramQueryCondition != null and paramMap.paramQueryCondition != '' ">
+                and ${paramMap.paramQueryCondition}
+            </if>
+        </where>
+        GROUP BY
+        who.id
+        ORDER BY
+        who.update_time DESC
+    </select>
+
+    <select id="getMyTasksMultiProcess" resultType="java.util.Map">
+        SELECT
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        who.process_id,
+        ft.name task_name,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        pa.*,
+        pa.id param_id,
+        wp.request_type,
+        ft.id task_id,
+        CASE
+        WHEN who.order_status = '2' THEN NULL
+        ELSE ft.display_name
+        END as display_name
+        FROM
+        wf_order who
+        LEFT JOIN wf_process wp ON who.process_id = wp.id
+        LEFT JOIN ${paramMap.tableName} pa ON who.business_key = pa.id
+        LEFT JOIN (
+        SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY CASE task_status WHEN 1 THEN 0 ELSE 1 END, create_time DESC) AS task_rn
+        FROM
+        wf_task) ft ON who.id = ft.order_id
+        <where>
+            and ft.task_rn = 1
+            <if test="paramMap.requester != null and paramMap.requester != '' ">
+                and who.requester_name like concat('%',#{paramMap.requester},'%')
+            </if>
+            <if test="paramMap.queryAll != '' ">
+                and who.requester_id = #{paramMap.guid}
+            </if>
+            <if test="paramMap.paramQueryCondition != null and paramMap.paramQueryCondition != '' ">
+                and ${paramMap.paramQueryCondition}
+            </if>
+            <if test="paramMap.processIds != null">
+                and who.process_id in
+                <foreach item="item" collection="paramMap.processIds" separator="," open="(" close=")" index="">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY
+        who.id
+        ORDER BY
+        who.update_time DESC
+    </select>
+
+    <select id="getAllTasks" resultType="java.util.Map">
+        SELECT
+        ft.name task_name,
+        who.process_id processId,
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        pa.*,
+        pa.id param_id,
+        wp.request_type,
+        ft.id task_id,
+        CASE 
+            WHEN who.order_status = '2' THEN NULL 
+            ELSE ft.display_name 
+        END as display_name
+        FROM
+        wf_order who
+        LEFT JOIN wf_process wp ON who.process_id = wp.id
+        LEFT JOIN ${paramMap.tableName} pa ON who.business_key = pa.id
+        LEFT JOIN (
+        SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY CASE task_status WHEN 1 THEN 0 ELSE 1 END, create_time DESC) AS task_rn
+        FROM
+        wf_task) ft ON who.id = ft.order_id
+        <where>
+            and ft.task_rn = 1
+            <if test="paramMap.paramQueryCondition != null and paramMap.paramQueryCondition != '' ">
+                and ${paramMap.paramQueryCondition}
+            </if>
+            <if test="paramMap.queryAll == '0' ">
+                and (who.create_by = #{paramMap.guid}
+                or who.requester_id = #{paramMap.guid}
+                or ft.approver_id = #{paramMap.guid})
+            </if>
+        </where>
+        GROUP BY
+        who.id
+        ORDER BY
+        who.update_time DESC
+    </select>
+
+    <select id="getPendingTasksWithoutProcess" resultType="java.util.Map">
+        select
+        wt.name task_name,
+        wt.display_name,
+        wt.operator,
+        wt.id task_id,
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        wp.request_type,
+        wp.unit_id
+        from wf_task wt
+        left join wf_order who on wt.order_id = who.id
+        left join wf_process wp on who.process_id = wp.id
+        where
+        FIND_IN_SET(#{params.currentUserId}, wt.operator_id)
+        and wt.task_status='1'
+        order by who.update_time desc
+    </select>
+
+    <select id="getRelateTasksMultiProcess" resultType="java.util.Map">
+        SELECT
+        who.order_no,
+        who.requester_name,
+        who.creator_name,
+        who.id order_id,
+        who.request_date,
+        who.order_status,
+        ft.name task_name,
+        (select item_text
+        from wf_dict_item
+        where
+        dict_id = 1 and item_value = who.order_status) order_status_text,
+        pa.*,
+        pa.id param_id,
+        wp.request_type,
+        ft.id task_id,
+        CASE
+        WHEN who.order_status = '2' THEN NULL
+        ELSE ft.display_name
+        END as display_name
+        FROM
+        wf_order who
+        LEFT JOIN wf_process wp ON who.process_id = wp.id
+        LEFT JOIN ${paramMap.tableName} pa ON who.business_key = pa.id
+        LEFT JOIN (
+        SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY CASE task_status WHEN 1 THEN 0 ELSE 1 END, create_time DESC) AS task_rn
+        FROM
+        wf_task) ft ON who.id = ft.order_id
+        <where>
+            and ft.task_rn = 1
+            <if test="paramMap.requester != null and paramMap.requester != '' ">
+                and who.requester_name like concat('%',#{paramMap.requester},'%')
+            </if>
+            <if test="paramMap.queryAll != '' ">
+                and (who.creator_id = #{paramMap.guid}
+                or who.requester_id = #{paramMap.guid}
+                or ft.approver_id = #{paramMap.guid})
+            </if>
+            <if test="paramMap.paramQueryCondition != null and paramMap.paramQueryCondition != '' ">
+                and ${paramMap.paramQueryCondition}
+            </if>
+            <if test="paramMap.processIds != null">
+                and who.process_id in
+                <foreach item="item" collection="paramMap.processIds" separator="," open="(" close=")" index="">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY
+        who.id
+        ORDER BY
+        who.update_time DESC
+    </select>
+
 </mapper> 

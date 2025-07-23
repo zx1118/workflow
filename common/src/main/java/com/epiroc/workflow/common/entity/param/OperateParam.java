@@ -31,6 +31,10 @@ public class OperateParam {
      */
     private Integer taskId;
 
+    private String unitId;
+
+    private String requestType;
+
     private String orderStatus;
 
     /**
@@ -136,5 +140,6 @@ public class OperateParam {
 
     private String comment;
 
+    private Boolean needUpdate = true;
 
 }

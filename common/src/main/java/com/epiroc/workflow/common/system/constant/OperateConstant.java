@@ -15,6 +15,8 @@ public interface OperateConstant {
 
     String OPERATE_SUBMIT = "SUBMIT";
 
+    String OPERATE_BATCH_SUBMIT = "BATCH_SUBMIT";
+
     String OPERATE_APPROVE = "APPROVE";
 
 }

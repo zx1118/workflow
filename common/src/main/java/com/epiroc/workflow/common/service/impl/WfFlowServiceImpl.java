@@ -69,13 +69,21 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
     @Override
     public WorkflowResult getFlow(GetFlowForm getFlowForm) {
         // 获取流程定义
-        WfProcess wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
+        WfProcess wfProcess = null;
+        if(oConvertUtils.isNotEmpty(getFlowForm.getWfProcessId())){
+            wfProcess = wfProcessService.getById(getFlowForm.getWfProcessId());
+        } else {
+            wfProcess = wfProcessService.queryWfProcessOne(oConvertUtils.entityToModel(getFlowForm, WfProcess.class));
+        }
         if (oConvertUtils.isEmpty(wfProcess)) {
             return WorkflowResult.error("流程定义不存在");
         }
         FlowContext flowContext = new FlowContext(wfProcess.getFlowTypes(), this);
         // 流程参数
         FlowParam flowParam = oConvertUtils.entityToModel(getFlowForm, FlowParam.class);
+        if(oConvertUtils.isEmpty(flowParam.getWfProcessId())){
+            flowParam.setWfProcessId(wfProcess.getId());
+        }
         // 获取流程信息
         Map<String, Object> flowInfoMap = flowContext.getFlowInfoResult(new HashMap<>(), flowParam);
         if (oConvertUtils.isEmpty(flowInfoMap)) {
@@ -147,10 +155,10 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
                 resultList.addAll(temp.getWfParticipantIds());
             }
             // 根据需要审批的金额，获取需要的审批人
-            List<Prokura> prokuraList = prokuraMapper.getProkuraParticipants(param);
+            List<WfProkura> wfProkuraList = prokuraMapper.getProkuraParticipants(param);
             // 获取前 prokuraList.size() 个元素
-            if(resultList.size() != prokuraList.size()){
-                resultList = resultList.subList(0, prokuraList.size());
+            if(resultList.size() != wfProkuraList.size()){
+                resultList = resultList.subList(0, wfProkuraList.size());
             }
         }
         return resultList;
@@ -175,10 +183,10 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
         List<Integer> resultList = wfFlowMapper.getWfFlowIdList(param);
         if (oConvertUtils.listIsNotEmpty(resultList)) {
             // 根据需要审批的金额，获取需要的审批人
-            List<Prokura> prokuraList = prokuraMapper.getProkuraParticipants(param);
+            List<WfProkura> wfProkuraList = prokuraMapper.getProkuraParticipants(param);
             // 获取前 prokuraList.size() 个元素
-            if(resultList.size() != prokuraList.size()){
-                resultList = resultList.subList(0, prokuraList.size());
+            if(resultList.size() != wfProkuraList.size()){
+                resultList = resultList.subList(0, wfProkuraList.size());
             }
         }
         return resultList;
@@ -191,10 +199,10 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
         List<WfFlow> wfFlowList = queryWfFlowList(wfFlow);
         if (oConvertUtils.listIsNotEmpty(wfFlowList)) {
             // 根据需要审批的金额，获取需要的审批人
-            List<Prokura> prokuraList = prokuraMapper.getProkuraParticipants(param);
+            List<WfProkura> wfProkuraList = prokuraMapper.getProkuraParticipants(param);
             // 获取前 prokuraList.size() 个元素
-            if(wfFlowList.size() != prokuraList.size() && wfFlowList.size() > prokuraList.size()){
-                wfFlowList = wfFlowList.subList(0, prokuraList.size());
+            if(wfFlowList.size() != wfProkuraList.size() && wfFlowList.size() > wfProkuraList.size()){
+                wfFlowList = wfFlowList.subList(0, wfProkuraList.size());
             }
         }
         return wfFlowList;
@@ -255,6 +263,11 @@ public class WfFlowServiceImpl extends ServiceImpl<WfFlowMapper, WfFlow> impleme
         WfTask nextWftask = oConvertUtils.entityToModel(flowList.get(1), WfTask.class);
         wfTaskService.save(nextWftask);
         return flowList;
+    }
+
+    @Override
+    public List<Map<String, Object>> executeSql(String sql) {
+        return wfFlowMapper.executeQuerySql(sql);
     }
 
 

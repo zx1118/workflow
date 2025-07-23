@@ -121,4 +121,6 @@ public class WfFlow implements Serializable {
     @TableField("remarks")
     private String remarks;
 
+    private String conditions;
+
 }

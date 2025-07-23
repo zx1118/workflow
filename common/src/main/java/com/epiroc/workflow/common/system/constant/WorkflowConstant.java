@@ -19,6 +19,8 @@ public interface WorkflowConstant {
 
     String FLOW_TYPE_ORGANIZATIONAL_STRUCTURE = "3";
 
+    String FLOW_TYPE_CONDITION = "4";
+
     Integer CREATE_REQUEST_ID = 1;
 
     String FIELD_SORT_ORDER = "sort_order";

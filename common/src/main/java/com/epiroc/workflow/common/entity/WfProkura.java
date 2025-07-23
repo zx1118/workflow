@@ -11,8 +11,8 @@ import java.util.Date;
  * Prokura 实体类
  */
 @Data
-@TableName("prokura")
-public class Prokura {
+@TableName("wf_prokura")
+public class WfProkura {
 
     /**
      * 主键 ID

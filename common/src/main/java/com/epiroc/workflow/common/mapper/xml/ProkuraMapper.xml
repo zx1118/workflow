@@ -2,28 +2,44 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.epiroc.workflow.common.mapper.ProkuraMapper">
 
-    <select id="getProkuraParticipants" resultType="com.epiroc.workflow.common.entity.Prokura">
+    <select id="getProkuraParticipants" resultType="com.epiroc.workflow.common.entity.WfProkura">
         SELECT
         p.*,
         CASE
-        WHEN p.max_approval = mar.target_max THEN 'current'
+        WHEN p.max_approval = mar.target_max OR (p.min_approval = 0.00 AND p.max_approval = 0.00) THEN 'current'
         ELSE 'previous'
         END AS approval_type
-        FROM prokura p
-        JOIN (
-        SELECT MIN(max_approval) AS target_max
-        FROM prokura
-        WHERE
-        (min_approval IS NULL OR min_approval &lt;= #{param.amount})
-        AND max_approval &gt;= #{param.amount}
-        AND del_flag = '0'
-        AND unit_id = #{param.unitId}
+        FROM wf_prokura p
+        CROSS JOIN (
+        SELECT 
+        CASE 
+        WHEN EXISTS (
+            SELECT 1 FROM wf_prokura 
+            WHERE (min_approval IS NULL OR min_approval &lt;= #{param.amount})
+            AND max_approval &gt;= #{param.amount}
+            AND del_flag = '0'
+            AND wf_process_id = #{param.wfProcessId}
+        ) THEN (
+            SELECT MIN(max_approval) 
+            FROM wf_prokura 
+            WHERE (min_approval IS NULL OR min_approval &lt;= #{param.amount})
+            AND max_approval &gt;= #{param.amount}
+            AND del_flag = '0'
+            AND wf_process_id = #{param.wfProcessId}
+        )
+        ELSE 999999999
+        END AS target_max
         ) mar
         WHERE
         p.del_flag = '0'
-        AND p.unit_id = #{param.unitId}
-        AND p.max_approval &lt;= mar.target_max
-        ORDER BY p.max_approval DESC
+        AND p.wf_process_id = #{param.wfProcessId}
+        AND (
+            (p.min_approval = 0.00 AND p.max_approval = 0.00) OR
+            ((p.min_approval IS NULL OR p.min_approval &lt;= #{param.amount}) AND p.max_approval &gt;= #{param.amount} AND p.max_approval &lt;= mar.target_max)
+        )
+        ORDER BY 
+        CASE WHEN p.min_approval = 0.00 AND p.max_approval = 0.00 THEN 0 ELSE 1 END,
+        p.max_approval DESC
     </select>
 
 </mapper>

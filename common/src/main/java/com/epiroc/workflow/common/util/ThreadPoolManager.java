@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Component
 public class ThreadPoolManager {
+
     private static final Logger logger = LoggerFactory.getLogger(ThreadPoolManager.class);
 
     // 核心线程数

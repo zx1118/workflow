@@ -28,6 +28,7 @@ public class CreateRequestFlow implements IFlow<FlowParam> {
             wfFlow.setField("REQUESTER");
             wfFlow.setRuleType(0);
             wfFlow.setWfRuleId(0);
+            wfFlow.setRemarks(param.getComment());
             flowList.add(wfFlow);
             flowInfoMap.put("CreateRequestFlowInfo", new ArrayList<>(Arrays.asList(wfFlow)));
         }

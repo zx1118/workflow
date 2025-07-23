@@ -26,7 +26,7 @@ public class WfProcess {
     private String requestType;
 
     @TableField("unit_id")
-    private Integer unitId;
+    private String unitId;
 
     @TableField("depart_id")
     private Integer departId;

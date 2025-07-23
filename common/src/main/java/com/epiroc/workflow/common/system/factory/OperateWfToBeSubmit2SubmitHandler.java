@@ -22,7 +22,7 @@ import java.util.Map;
  * @date 2025-06-14
  */
 @Component
-public class OperateWfToBeSumbit2SubmitHandler extends OperateAbstractHandler implements StateConstant, OperateConstant {
+public class OperateWfToBeSubmit2SubmitHandler extends OperateAbstractHandler implements StateConstant, OperateConstant {
 
     @Resource
     private WorkflowStateService workflowStateService;

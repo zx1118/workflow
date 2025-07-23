@@ -14,6 +14,18 @@ public interface WfTaskService extends IService<WfTask> {
 
     IPage<Map<String, Object>> pending(TaskForm taskForm);
 
+    IPage<Map<String, Object>> pendingWithoutProcess(TaskForm taskForm);
+
+    IPage<Map<String, Object>> pendingMultiProcess(TaskForm taskForm);
+
+    IPage<Map<String, Object>> my(Map<String, Object> myParam);
+
+    IPage<Map<String, Object>> myMultiProcess(Map<String, Object> myParam);
+
+    IPage<Map<String, Object>> relateMultiProcess(Map<String, Object> relateParam);
+
+    IPage<Map<String, Object>> all(Map<String, Object> allParam);
+
     /**
      * 分页查询待办任务
      * @param taskForm 查询条件

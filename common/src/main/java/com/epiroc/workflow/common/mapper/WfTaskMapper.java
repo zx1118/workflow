@@ -44,4 +44,17 @@ public interface WfTaskMapper extends BaseMapper<WfTask> {
 
     IPage<Map<String, Object>> getPendingTasks(Page<Map<String, Object>> page, @Param("params") TaskForm params);
 
+    IPage<Map<String, Object>> getPendingTasksWithoutProcess(Page<Map<String, Object>> page, @Param("params") TaskForm params);
+
+    IPage<Map<String, Object>> getPendingTasksParamMap(Page<Map<String, Object>> page, Map<String, Object> paramMap);
+
+    IPage<Map<String, Object>> getMyTasks(Page<Map<String, Object>> page, @Param("paramMap") Map<String, Object> paramMap);
+
+    IPage<Map<String, Object>> getMyTasksMultiProcess(Page<Map<String, Object>> page, @Param("paramMap") Map<String, Object> paramMap);
+
+    IPage<Map<String, Object>> getAllTasks(Page<Map<String, Object>> page, @Param("paramMap") Map<String, Object> allParam);
+
+    IPage<Map<String, Object>> getPendingTasksMultiProcess(Page<Map<String, Object>> page, @Param("params") TaskForm taskForm);
+
+    IPage<Map<String, Object>> getRelateTasksMultiProcess(Page<Map<String, Object>> page, @Param("paramMap") Map<String, Object> relateParam);
 }

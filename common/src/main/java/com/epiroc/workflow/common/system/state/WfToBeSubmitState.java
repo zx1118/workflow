@@ -51,6 +51,7 @@ public class WfToBeSubmitState implements WorkflowState {
         List<WfTaskParticipant> flowList = wfOperateService.dealSubmitFlow(operateParam, order.getId());
         WfTaskParticipant nextFlow = flowList.get(1);
         result.put("next", nextFlow);
+        result.put("orderNo", order.getOrderNo());
         return result;
     }
 

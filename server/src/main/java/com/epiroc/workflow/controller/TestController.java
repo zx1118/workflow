@@ -6,12 +6,16 @@ import com.epiroc.workflow.common.entity.ScParam;
 import com.epiroc.workflow.common.entity.form.TaskForm;
 import com.epiroc.workflow.common.entity.form.WfSubmitForm;
 import com.epiroc.workflow.common.service.WfTaskService;
+import com.epiroc.workflow.common.util.AsyncService;
 import org.springframework.web.bind.annotation.*;
 import com.epiroc.workflow.common.service.WorkflowService;
+import com.epiroc.workflow.common.entity.param.BatchOperateParam;
 
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * 测试 Controller
@@ -80,6 +84,27 @@ public class TestController {
         } catch (Exception e) {
             return WorkflowResult.error("查询待办任务列表失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 批量提交测试
+     * @param batchParam 批量操作参数
+     * @return 批量操作结果
+     */
+    @PostMapping("/batch-submit")
+    public Map<String, Object> batchSubmit(@RequestBody BatchOperateParam batchParam) {
+        return workflowService.batchSubmit(batchParam);
+    }
+
+    @Resource
+    private AsyncService asyncService;
+
+
+    @GetMapping("/async")
+    public String test() throws ExecutionException, InterruptedException {
+        CompletableFuture<String> future = asyncService.processAsyncWithResult("Test");
+//        System.out.println(future.get());
+        return "success";
     }
 
 }
